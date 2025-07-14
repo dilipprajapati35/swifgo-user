@@ -281,6 +281,7 @@ class DioHttp {
       wrapData: false,
     );
     final data = response.data is Map ? response.data : {};
+    print('Searched Trips Response: $data');
     final onwardTrips = (data['onwardTrips'] as List? ?? [])
         .map((tripJson) => TripModel.fromJson(tripJson as Map<String, dynamic>))
         .toList();

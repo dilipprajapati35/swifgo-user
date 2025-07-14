@@ -656,6 +656,7 @@ class _Paymentscreen1State extends State<Paymentscreen1> {
                     color: Color(0xffffffff)),
               ),
             ).paddingAll(16),
+            10.height
           ],
         ),
       ),

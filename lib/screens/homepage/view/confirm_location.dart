@@ -180,7 +180,7 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
                 16.height,
                 Padding(
                   padding: const EdgeInsets.only(left: 16.0),
-                  child: Text("vehicle damage protection plan".toUpperCase(),
+                  child: Text("passengers protection plan".toUpperCase(),
                       style: AppStyle.caption1w400.copyWith(
                           color: AppColor.greyShade1,
                           fontWeight: FontWeight.w600)),
@@ -237,7 +237,7 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
                 ),
                 Padding(
                   padding: EdgeInsets.only(
-                      bottom: 12,
+                      bottom: 25,
                       left: 20,
                       right: 20,
                       top: 12),

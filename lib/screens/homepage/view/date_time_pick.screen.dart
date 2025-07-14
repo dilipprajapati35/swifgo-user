@@ -25,6 +25,7 @@ class DateTimePickerModal {
   List<String> _dateDisplayStrings = [];
   double _swipeIconHorizontalOffset = 0.0;
   bool _isSwipeCompleted = false;
+
   void _initializePickers() {
     _swipeIconHorizontalOffset = 0.0; // Reset swipe state
     _isSwipeCompleted = false;
@@ -112,7 +113,7 @@ class DateTimePickerModal {
                   Container(
                     margin: const EdgeInsets.only(
                         top: 75), // Space for close button
-                    padding: const EdgeInsets.fromLTRB(20, 25, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(20, 25, 20, 30),
                     decoration: const BoxDecoration(
                       color: AppColor.greyWhite,
                       borderRadius: BorderRadius.only(
@@ -125,7 +126,7 @@ class DateTimePickerModal {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         Text(
-                          "When do you need driver?",
+                          "When do u need the ride?",
                           style: AppStyle.title3.copyWith(
                               fontSize: 22, color: AppColor.greyShade1),
                         ),
@@ -140,7 +141,8 @@ class DateTimePickerModal {
                         _buildDateTimePickerWheels(
                             hours, minutes, amPm, setModalState),
                         30.height,
-                        _buildSwipeButton(modalContext, onSelectDateTime, setModalState),
+                        _buildSwipeButton(
+                            modalContext, onSelectDateTime, setModalState),
                         10.height,
                       ],
                     ),
@@ -289,8 +291,10 @@ class DateTimePickerModal {
     );
   }
 
-  Widget _buildSwipeButton(BuildContext modalContext,
-      Function(DateTime date, String timePeriod) onSelectDateTime, StateSetter setModalState) {
+  Widget _buildSwipeButton(
+      BuildContext modalContext,
+      Function(DateTime date, String timePeriod) onSelectDateTime,
+      StateSetter setModalState) {
     const double iconBoxSize = 48.0; // Size of the draggable white box
     const double iconBoxMargin = 6.0; // Margin around the white box
     const double effectiveIconSize = iconBoxSize +
@@ -326,9 +330,10 @@ class DateTimePickerModal {
             children: [
               // Text "Swipe right to select seat" - positioned centrally
               Positioned.fill(
-                left: effectiveIconSize -
-                    20, // Adjust left padding to not overlap with initial icon too much
-                right: 20, // Padding on the right
+                left: effectiveIconSize - 20,
+                // Adjust left padding to not overlap with initial icon too much
+                right: 20,
+                // Padding on the right
                 child: Center(
                   child: Text(
                     "Swipe right to select seat",

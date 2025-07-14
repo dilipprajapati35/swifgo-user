@@ -184,7 +184,7 @@ Future<void> showRideSelectionModal(
                           Text('Evening ride'),
                         ],
                       ),
-                      SizedBox(height: 24),
+                      SizedBox(height: 18),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -309,7 +309,7 @@ class RideListScreen extends StatelessWidget {
                         color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 20),
           ],
         ),
       ),

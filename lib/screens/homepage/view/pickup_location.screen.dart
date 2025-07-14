@@ -588,7 +588,7 @@ class _PickupLocationPageState extends State<PickupLocationPage> {
         color: Colors.white,
         child: Padding(
           padding: EdgeInsets.only(
-              bottom: 12,
+              bottom: 25,
               left: 20,
               right: 20,
               top: 12

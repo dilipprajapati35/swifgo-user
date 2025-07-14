@@ -4,6 +4,7 @@ import 'package:flutter_arch/common/app_assets.dart';
 import 'package:flutter_arch/common/app_primary_button.dart';
 import 'package:flutter_arch/common/style/app_style.dart';
 import 'package:flutter_arch/screens/Auth/view/completeyourkyc_screen.dart';
+
 // import 'package:flutter_arch/screens/Auth/view/completeyourkyc_screen.dart';
 import 'package:flutter_arch/theme/colorTheme.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,18 +36,21 @@ class _SelfieUploadScreenState extends State<SelfieUploadScreen> {
     //   toast('Please upload a selfie before continuing.');
     //   return;
     // }
-    Navigator.push(context, MaterialPageRoute(builder: (context) => Complete_Kyc_Screen()));
+    Navigator.push(context,
+        MaterialPageRoute(builder: (context) => Complete_Kyc_Screen()));
   }
 
   Widget _buildHeader() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.arrow_back, size: 28).onTap(() => Navigator.pop(context)),
+          const Icon(Icons.arrow_back, size: 28)
+              .onTap(() => Navigator.pop(context)),
           Image.asset(AppAssets.logoSmall, height: 32),
         ],
       ).paddingSymmetric(horizontal: 16);
 
-  Widget _buildTitle() => Text('Take a Selfie', style: AppStyle.title).paddingSymmetric(horizontal: 16);
+  Widget _buildTitle() => Text('Take a Selfie', style: AppStyle.title)
+      .paddingSymmetric(horizontal: 16);
 
   Widget _buildSubtitle() => Text(
         'This helps personalize your experience. Make sure your face is clearly visible!',
@@ -59,7 +63,8 @@ class _SelfieUploadScreenState extends State<SelfieUploadScreen> {
     return Center(
       child: CustomPaint(
         size: Size(width, height),
-        painter: DottedOvalPainter(color: const Color(0xFFE5E5E5), dotRadius: 3, spacing: 10),
+        painter: DottedOvalPainter(
+            color: const Color(0xFFE5E5E5), dotRadius: 3, spacing: 10),
         child: _image == null
             ? SizedBox(
                 height: height,
@@ -67,14 +72,18 @@ class _SelfieUploadScreenState extends State<SelfieUploadScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.videocam_outlined, color: AppColor.buttonColor, size: 32),
+                    const Icon(Icons.videocam_outlined,
+                        color: AppColor.buttonColor, size: 32),
                     8.height,
-                    Text('Upload Photo', style: AppStyle.body.copyWith(color: AppColor.buttonColor)),
+                    Text('Upload Photo',
+                        style: AppStyle.body
+                            .copyWith(color: AppColor.buttonColor)),
                   ],
                 ),
               )
             : ClipOval(
-                child: Image.file(_image!, fit: BoxFit.cover, width: width, height: height),
+                child: Image.file(_image!,
+                    fit: BoxFit.cover, width: width, height: height),
               ),
       ),
     ).onTap(_pickImage);
@@ -119,6 +128,18 @@ class _SelfieUploadScreenState extends State<SelfieUploadScreen> {
             _buildPrivacyNote(),
             14.height,
             _buildContinueButton(),
+            8.height,
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Text('Skip',
+                      style: AppStyle.caption1w400
+                          .copyWith(color: AppColor.greyShade2, fontSize: 16))
+                  .paddingOnly(left: 16, right: 16, bottom: 16)
+                  .onTap(() => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => Complete_Kyc_Screen()))),
+            ),
             13.height,
           ],
         ),

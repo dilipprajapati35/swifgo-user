@@ -269,7 +269,7 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
             )
           : Container(
               child: Padding(
-                padding: EdgeInsets.only(bottom: 12, left: 20, right: 20, top: 12),
+                padding: EdgeInsets.only(bottom: 25, left: 20, right: 20, top: 12),
                 child: AppPrimaryButton(
                   text: "Select Seat",
                   onTap: () {

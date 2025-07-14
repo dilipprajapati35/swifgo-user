@@ -9,7 +9,6 @@ import 'package:flutter_arch/theme/colorTheme.dart';
 import 'package:flutter_arch/widget/snack_bar.dart';
 import 'package:nb_utils/nb_utils.dart';
 
-
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
 
@@ -179,11 +178,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Text(label, style: AppStyle.caption1w600)
-        //     .paddingOnly(left: 4, bottom: 4),
         TextFormField(
           controller: controller,
-          // textFieldType: TextFieldType.NAME,
           decoration: InputDecoration(
             hintText: hint,
             labelText: label,
@@ -198,7 +194,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 letterSpacing: 0,
                 fontWeight: FontWeight.w400),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -217,7 +213,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         16.height,
       ],
-    ).paddingSymmetric(horizontal: 16,);
+    ).paddingSymmetric(horizontal: 16);
   }
 
   Widget _buildGenderDropdown() {
@@ -240,7 +236,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 letterSpacing: 0,
                 fontWeight: FontWeight.w400),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -260,7 +256,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             return DropdownMenuItem<String>(
               value: gender,
               child: Text(
-                gender,
+                gender[0].toUpperCase() + gender.substring(1),
                 style: AppStyle.body.copyWith(
                   fontSize: 16,
                   height: 22 / 16,
@@ -280,7 +276,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         16.height,
       ],
-    ).paddingSymmetric(horizontal: 16,);
+    ).paddingSymmetric(horizontal: 16);
   }
 
   Widget _buildTimePickerField() {
@@ -311,9 +307,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 );
               },
             );
-            
+
             if (pickedTime != null) {
-              String formattedTime = 
+              String formattedTime =
                   '${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}';
               setState(() {
                 _timingController.text = formattedTime;
@@ -334,7 +330,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 letterSpacing: 0,
                 fontWeight: FontWeight.w400),
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -357,6 +353,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         16.height,
       ],
-    ).paddingSymmetric(horizontal: 16,);
+    ).paddingSymmetric(horizontal: 16);
   }
 }

@@ -280,7 +280,7 @@ class _PaymentModeSheetState extends State<PaymentModeSheet> {
                   const SizedBox(height: 32),
 
                   _buildConfirmButton(),
-                  const SizedBox(height: 10), // For bottom safe area
+                  const SizedBox(height: 20), // For bottom safe area
                 ],
               ),
             ),

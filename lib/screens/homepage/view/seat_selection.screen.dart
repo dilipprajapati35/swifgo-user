@@ -200,7 +200,7 @@ void show(BuildContext pageContext, {
                           );
                         },
                       ),
-                      10.height,
+                      20.height,
                     ],
                   ),
                 ),
