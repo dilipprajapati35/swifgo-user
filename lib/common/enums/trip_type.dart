@@ -1,0 +1,1 @@
+enum TripType { roundTrip, oneWay } 
