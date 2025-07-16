@@ -1,4 +1,4 @@
-package com.example.flutter_arch
+package com.swiftgo
 
 import android.appwidget.AppWidgetManager
 import android.content.Context

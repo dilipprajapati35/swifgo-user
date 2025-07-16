@@ -1,4 +1,4 @@
-package com.example.flutter_arch
+package com.swiftgo
 
 import io.flutter.embedding.android.FlutterActivity
 

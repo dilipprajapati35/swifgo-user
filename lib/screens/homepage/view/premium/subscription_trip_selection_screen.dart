@@ -33,10 +33,12 @@ class SubscriptionTripSelectionScreen extends StatefulWidget {
   });
 
   @override
-  State<SubscriptionTripSelectionScreen> createState() => _SubscriptionTripSelectionScreenState();
+  State<SubscriptionTripSelectionScreen> createState() =>
+      _SubscriptionTripSelectionScreenState();
 }
 
-class _SubscriptionTripSelectionScreenState extends State<SubscriptionTripSelectionScreen> {
+class _SubscriptionTripSelectionScreenState
+    extends State<SubscriptionTripSelectionScreen> {
   List<TripModel> _onwardTrips = [];
   List<TripModel> _returnTrips = [];
   bool _isLoading = false;
@@ -77,7 +79,9 @@ class _SubscriptionTripSelectionScreenState extends State<SubscriptionTripSelect
         _onwardTrips = tripResults['onwardTrips'] ?? [];
         _returnTrips = tripResults['returnTrips'] ?? [];
         _isLoading = false;
-        if (widget.isRoundTrip && _onwardTrips.isNotEmpty && _returnTrips.isEmpty) {
+        if (widget.isRoundTrip &&
+            _onwardTrips.isNotEmpty &&
+            _returnTrips.isEmpty) {
           _roundTripNotAvailable = true;
         }
       });
@@ -89,10 +93,12 @@ class _SubscriptionTripSelectionScreenState extends State<SubscriptionTripSelect
   }
 
   void _proceedToSeatSelection() {
-    final onwardTrip = _onwardTrips.firstWhere((t) => t.scheduledTripId == _selectedOnwardTripId);
+    final onwardTrip = _onwardTrips
+        .firstWhere((t) => t.scheduledTripId == _selectedOnwardTripId);
     TripModel? returnTrip;
     if (widget.isRoundTrip && _selectedReturnTripId != null) {
-      returnTrip = _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId);
+      returnTrip = _returnTrips
+          .firstWhere((t) => t.scheduledTripId == _selectedReturnTripId);
     }
     SubscriptionSeatSelectionModal.show(
       context,
@@ -128,21 +134,28 @@ class _SubscriptionTripSelectionScreenState extends State<SubscriptionTripSelect
       return Scaffold(
         backgroundColor: AppColor.greyShade7,
         appBar: _buildAppBar(context),
-        body: Center(child: CircularProgressIndicator(color: AppColor.buttonColor)),
+        body: Center(
+            child: CircularProgressIndicator(color: AppColor.buttonColor)),
       );
     }
     if (widget.isRoundTrip && _roundTripNotAvailable) {
       return Scaffold(
         backgroundColor: AppColor.greyShade7,
         appBar: _buildAppBar(context),
-        body: Center(child: Text('Round trip is not available for this route.', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16))),
+        body: Center(
+            child: Text('Round trip is not available for this route.',
+                style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16))),
       );
     }
     if (_onwardTrips.isEmpty) {
       return Scaffold(
         backgroundColor: AppColor.greyShade7,
         appBar: _buildAppBar(context),
-        body: Center(child: Text('No trips available', style: TextStyle(fontSize: 16))),
+        body: Center(
+            child: Text('No trips available', style: TextStyle(fontSize: 16))),
       );
     }
     return Scaffold(
@@ -150,133 +163,155 @@ class _SubscriptionTripSelectionScreenState extends State<SubscriptionTripSelect
       appBar: _buildAppBar(context),
       bottomSheet: widget.isRoundTrip && _returnTrips.isNotEmpty
           ? Container(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: 12, left: 20, right: 20, top: 12),
-          child: AppPrimaryButton(
-            text: "Select Onward & Return Seat",
-            onTap: () {
-              if (_selectedOnwardTripId == null || _selectedReturnTripId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Please select both onward and return trips"), backgroundColor: Colors.orange),
-                );
-                return;
-              }
-              _proceedToSeatSelection();
-            },
-          ),
-        ),
-      )
+              child: Padding(
+                padding:
+                    EdgeInsets.only(bottom: 12, left: 20, right: 20, top: 12),
+                child: AppPrimaryButton(
+                  text: "Select Onward & Return Seat",
+                  onTap: () {
+                    if (_selectedOnwardTripId == null ||
+                        _selectedReturnTripId == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                "Please select both onward and return trips"),
+                            backgroundColor: Colors.orange),
+                      );
+                      return;
+                    }
+                    _proceedToSeatSelection();
+                  },
+                ),
+              ),
+            )
           : Container(
-        child: Padding(
-          padding: EdgeInsets.only(bottom: 25, left: 20, right: 20, top: 12),
-          child: AppPrimaryButton(
-            text: "Select Seat",
-            onTap: () {
-              if (_selectedOnwardTripId != null) {
-                _proceedToSeatSelection();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Please select a trip first"), backgroundColor: Colors.orange),
-                );
-              }
-            },
-          ),
-        ),
-      ),
+              child: Padding(
+                padding:
+                    EdgeInsets.only(bottom: 25, left: 20, right: 20, top: 12),
+                child: AppPrimaryButton(
+                  text: "Select Seat",
+                  onTap: () {
+                    if (_selectedOnwardTripId != null) {
+                      _proceedToSeatSelection();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text("Please select a trip first"),
+                            backgroundColor: Colors.orange),
+                      );
+                    }
+                  },
+                ),
+              ),
+            ),
       body: widget.isRoundTrip && _returnTrips.isNotEmpty
           ? Column(
-        children: [
-          Expanded(
-            child: Row(
               children: [
-                // Onward trips
                 Expanded(
-                  child: Column(
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text("Onward Trips", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ),
+                      // Onward trips
                       Expanded(
-                        child: ListView.separated(
-                          padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 8),
-                          itemCount: _onwardTrips.length,
-                          itemBuilder: (context, index) {
-                            final trip = _onwardTrips[index];
-                            return _TripCard(
-                              tripData: trip,
-                              isSelected: _selectedOnwardTripId == trip.scheduledTripId,
-                              onTap: () {
-                                setState(() {
-                                  _selectedOnwardTripId = trip.scheduledTripId;
-                                });
-                              },
-                            );
-                          },
-                          separatorBuilder: (context, index) => SizedBox(height: 16),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text("Onward Trips",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            Expanded(
+                              child: ListView.separated(
+                                padding: EdgeInsets.only(
+                                    left: 8, right: 8, top: 8, bottom: 8),
+                                itemCount: _onwardTrips.length,
+                                itemBuilder: (context, index) {
+                                  final trip = _onwardTrips[index];
+                                  return _TripCard(
+                                    tripData: trip,
+                                    isSelected: _selectedOnwardTripId ==
+                                        trip.scheduledTripId,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedOnwardTripId =
+                                            trip.scheduledTripId;
+                                      });
+                                    },
+                                  );
+                                },
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: 16),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                VerticalDivider(width: 1, color: AppColor.greyShade5),
-                // Return trips
-                Expanded(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text("Return Trips", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ),
+                      VerticalDivider(width: 1, color: AppColor.greyShade5),
+                      // Return trips
                       Expanded(
-                        child: ListView.separated(
-                          padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 8),
-                          itemCount: _returnTrips.length,
-                          itemBuilder: (context, index) {
-                            final trip = _returnTrips[index];
-                            return _TripCard(
-                              tripData: trip,
-                              isSelected: _selectedReturnTripId == trip.scheduledTripId,
-                              onTap: () {
-                                setState(() {
-                                  _selectedReturnTripId = trip.scheduledTripId;
-                                });
-                              },
-                            );
-                          },
-                          separatorBuilder: (context, index) => SizedBox(height: 16),
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text("Return Trips",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            Expanded(
+                              child: ListView.separated(
+                                padding: EdgeInsets.only(
+                                    left: 8, right: 8, top: 8, bottom: 8),
+                                itemCount: _returnTrips.length,
+                                itemBuilder: (context, index) {
+                                  final trip = _returnTrips[index];
+                                  return _TripCard(
+                                    tripData: trip,
+                                    isSelected: _selectedReturnTripId ==
+                                        trip.scheduledTripId,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedReturnTripId =
+                                            trip.scheduledTripId;
+                                      });
+                                    },
+                                  );
+                                },
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: 16),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      )
+            )
           : ListView.separated(
-        padding: EdgeInsets.only(
-          left: 16.0,
-          right: 16.0,
-          top: 16.0,
-          bottom: 70.0 + MediaQuery.of(context).padding.bottom,
-        ),
-        itemCount: _onwardTrips.length,
-        itemBuilder: (context, index) {
-          final trip = _onwardTrips[index];
-          return _TripCard(
-            tripData: trip,
-            isSelected: _selectedOnwardTripId == trip.scheduledTripId,
-            onTap: () {
-              setState(() {
-                _selectedOnwardTripId = trip.scheduledTripId;
-              });
-            },
-          );
-        },
-        separatorBuilder: (context, index) => SizedBox(height: 16),
-      ),
+              padding: EdgeInsets.only(
+                left: 16.0,
+                right: 16.0,
+                top: 16.0,
+                bottom: 70.0 + MediaQuery.of(context).padding.bottom,
+              ),
+              itemCount: _onwardTrips.length,
+              itemBuilder: (context, index) {
+                final trip = _onwardTrips[index];
+                return _TripCard(
+                  tripData: trip,
+                  isSelected: _selectedOnwardTripId == trip.scheduledTripId,
+                  onTap: () {
+                    setState(() {
+                      _selectedOnwardTripId = trip.scheduledTripId;
+                    });
+                  },
+                );
+              },
+              separatorBuilder: (context, index) => SizedBox(height: 16),
+            ),
     );
   }
 }
@@ -295,7 +330,8 @@ class _TripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String hour = tripData.departureDateTime.hour.toString().padLeft(2, '0');
-    String minute = tripData.departureDateTime.minute.toString().padLeft(2, '0');
+    String minute =
+        tripData.departureDateTime.minute.toString().padLeft(2, '0');
     String day = tripData.departureDateTime.day.toString().padLeft(2, '0');
     String month = tripData.departureDateTime.month.toString().padLeft(2, '0');
     String amPm = tripData.departureDateTime.hour >= 12 ? 'PM' : 'AM';
@@ -358,9 +394,8 @@ class _TripCard extends StatelessWidget {
                       SizedBox(height: 4),
                       Text(
                         'Duration: ${tripData.durationText}',
-                        style: TextStyle(
-                            color: AppColor.greyShade3,
-                            fontSize: 11),
+                        style:
+                            TextStyle(color: AppColor.greyShade3, fontSize: 11),
                       ),
                     ],
                   ),
@@ -381,9 +416,8 @@ class _TripCard extends StatelessWidget {
                     SizedBox(height: 4),
                     Text(
                       '${tripData.availableSeats} seats',
-                      style: TextStyle(
-                          color: AppColor.greyShade3,
-                          fontSize: 11),
+                      style:
+                          TextStyle(color: AppColor.greyShade3, fontSize: 11),
                     ),
                   ],
                 )
@@ -406,9 +440,11 @@ class _TripCard extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _buildLocationRow("Pickup", tripData.pickupLocationName, Color(0xFF08875D)),
+                      _buildLocationRow("Pickup", tripData.pickupLocationName,
+                          Color(0xFF08875D)),
                       SizedBox(height: 12),
-                      _buildLocationRow("Destination", tripData.destinationLocationName, Color(0xFFE02D3C)),
+                      _buildLocationRow("Destination",
+                          tripData.destinationLocationName, Color(0xFFE02D3C)),
                     ],
                   ),
                 ),
@@ -423,14 +459,14 @@ class _TripCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.directions_car, size: 16, color: AppColor.greyShade3),
+                  Icon(Icons.directions_car,
+                      size: 16, color: AppColor.greyShade3),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${tripData.vehicleInfo.type} - ${tripData.vehicleInfo.model}',
-                      style: TextStyle(
-                          color: AppColor.greyShade3,
-                          fontSize: 12),
+                      style:
+                          TextStyle(color: AppColor.greyShade3, fontSize: 12),
                     ),
                   ),
                 ],

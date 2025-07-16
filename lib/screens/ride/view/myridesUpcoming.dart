@@ -6,6 +6,8 @@ import 'package:flutter_arch/services/dio_http.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_arch/screens/ride/view/cancel_booking_screen.dart';
 import 'package:flutter_arch/screens/ride/view/navigate_ride_screen.dart';
+import 'package:flutter_arch/storage/flutter_secure_storage.dart';
+import 'package:flutter_arch/views/tracking_screen.dart';
 
 class Myridesupcoming extends StatefulWidget {
   final RideModel? ride;
@@ -284,22 +286,30 @@ class _MyridesupcomingState extends State<Myridesupcoming> {
         children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NavigateRideScreen(
-                      bookingId: widget.ride?.bookingId ?? '',
+              onPressed: () async {
+                final token = await MySecureStorage().readToken();
+                if (token != null && widget.ride?.bookingId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TrackingScreen(
+                        bookingId: widget.ride!.bookingId,
+                        userToken: token,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Unable to start tracking: missing token or booking ID.')),
+                  );
+                }
               },
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Color(0xff3E57B4)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 padding: EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Text('Navigate Ride', style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xff3E57B4))),
+              child: Text('Track Ride', style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xff3E57B4))),
             ),
           ),
           SizedBox(width: 12),

@@ -72,7 +72,10 @@ class _Complete_Kyc_ScreenState extends State<Complete_Kyc_Screen> {
             15.height,
             GestureDetector(
               onTap: () {
-                const MainNavigation().launch(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => MainNavigation()),
+                );
               },
               child: Align(
                 alignment: Alignment.centerRight,

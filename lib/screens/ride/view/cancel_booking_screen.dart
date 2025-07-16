@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arch/screens/homepage/view/homepage.screen.dart';
+import 'package:flutter_arch/screens/main_navigation/main_navigation.dart';
 import 'package:flutter_arch/services/dio_http.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -92,7 +93,7 @@ class _CancelBookingScreenState extends State<CancelBookingScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => HomePage()),
+                    MaterialPageRoute(builder: (context) => MainNavigation()),
                     (route) => false,
                   ),
                   style: ElevatedButton.styleFrom(
