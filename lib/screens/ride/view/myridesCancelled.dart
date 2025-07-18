@@ -66,7 +66,7 @@ class _MyridescancelledState extends State<Myridescancelled> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMapSection(ride),
+                      // _buildMapSection(ride),
                       _buildCrnRow(ride),
                       Divider(height: 1),
                       _buildLocationSection(ride),

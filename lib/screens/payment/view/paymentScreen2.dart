@@ -19,6 +19,7 @@ class PaymentScreen2 extends StatefulWidget {
   final String? returnPickupStopId;
   final String? returnDropOffStopId;
   final List<String>? returnSelectedSeatIds;
+  final String price;
 
   const PaymentScreen2({
     super.key,
@@ -31,6 +32,7 @@ class PaymentScreen2 extends StatefulWidget {
     this.returnPickupStopId,
     this.returnDropOffStopId,
     this.returnSelectedSeatIds,
+    required this.price,
   });
   @override
   State<PaymentScreen2> createState() => _PaymentScreen2State();  
@@ -64,6 +66,18 @@ class _PaymentScreen2State extends State<PaymentScreen2> {
           paymentMethod = "cash";
       }
 
+      print({
+        "scheduledTripId": widget.scheduledTripId,
+        "pickupStopId": widget.pickupStopId,
+        "dropOffStopId": widget.dropOffStopId,
+        "selectedSeatIds": seatIds,
+        "isRoundTrip": widget.isRoundTrip,
+        "returnScheduledTripId": widget.returnScheduledTripId,
+        "returnPickupStopId": widget.returnPickupStopId,
+        "returnDropOffStopId": widget.returnDropOffStopId,
+        "returnSelectedSeatIds": widget.returnSelectedSeatIds,
+      });
+
       await dioHttp.makeBooking(
         context,
         widget.scheduledTripId,
@@ -75,7 +89,7 @@ class _PaymentScreen2State extends State<PaymentScreen2> {
         returnScheduledTripId: widget.returnScheduledTripId,
         returnPickupStopId: widget.returnPickupStopId,
         returnDropOffStopId: widget.returnDropOffStopId,
-        returnSelectedSeatIds: widget.returnSelectedSeatIds,
+        returnSelectedSeatIds: widget.isRoundTrip ? (widget.returnSelectedSeatIds ?? []) : null,
       );
 
       setState(() {
@@ -85,7 +99,9 @@ class _PaymentScreen2State extends State<PaymentScreen2> {
       // Navigate to success screen
       Navigator.pushReplacement( 
         context,
-        MaterialPageRoute(builder: (context) => Paymentsuccess()),
+        MaterialPageRoute(builder: (context) => Paymentsuccess(
+          price: widget.price,
+        )),
       );
     } on DioException catch (e) {
       setState(() {

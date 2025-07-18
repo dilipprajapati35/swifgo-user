@@ -91,6 +91,8 @@ void show(BuildContext pageContext, {
   String? returnPickupStopId,
   String? returnDropOffStopId,
   List<SeatInfo>? returnSelectedSeats,
+  int? onwardPrice,
+  int? returnPrice,
 }) async {
   this.pickupStopId = pickupId;
   this.dropOffStopId = dropoffId;
@@ -187,7 +189,8 @@ void show(BuildContext pageContext, {
                                 dropOffStopId: dropOffStopId ?? "",
                                 pickupAddress: pickupAddress,
                                 destinationAddress: destinationAddress,
-                                price: price, // Use the passed price
+                                onwardPrice: onwardPrice ?? int.tryParse(price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+                                returnPrice: returnPrice,
                                 isRoundTrip: isRoundTrip,
                                 returnPickupAddress: returnPickupAddress,
                                 returnDestinationAddress: returnDestinationAddress,

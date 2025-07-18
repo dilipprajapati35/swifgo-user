@@ -33,6 +33,21 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
     setState(() { _isLoading = true; _resultMessage = null; });
     try {
       final dioHttp = DioHttp();
+      // 1. Book the ride first
+      await dioHttp.makeBooking(
+        context,
+        widget.onwardTrip.scheduledTripId,
+        widget.onwardTrip.pickupStopId,
+        widget.onwardTrip.destinationStopId,
+        widget.onwardSeats.map((s) => s.id).toList(),
+        "cash", // or your payment method
+        isRoundTrip: widget.returnTrip != null,
+        returnScheduledTripId: widget.returnTrip?.scheduledTripId,
+        returnPickupStopId: widget.returnTrip?.pickupStopId,
+        returnDropOffStopId: widget.returnTrip?.destinationStopId,
+        returnSelectedSeatIds: widget.returnSeats?.map((s) => s.id).toList(),
+      );
+      // 2. Subscribe to plan if booking is successful
       await dioHttp.subscribeToPlan(
         context,
         widget.planId,
@@ -42,13 +57,13 @@ class _SubscriptionPaymentScreenState extends State<SubscriptionPaymentScreen> {
         returnPickupStopId: widget.returnTrip?.pickupStopId,
         returnDropoffStopId: widget.returnTrip?.destinationStopId,
       );
-      setState(() { _isLoading = false; _resultMessage = 'Subscription successful!'; });
+      setState(() { _isLoading = false; _resultMessage = 'Booking and subscription successful!'; });
       // Optionally, pop to root or show a success screen
       Future.delayed(Duration(seconds: 2), () {
         Navigator.of(context).popUntil((route) => route.isFirst);
       });
     } catch (e) {
-      setState(() { _isLoading = false; _resultMessage = 'Subscription failed. Please try again.'; });
+      setState(() { _isLoading = false; _resultMessage = 'Booking or subscription failed. Please try again.'; });
     }
   }
 

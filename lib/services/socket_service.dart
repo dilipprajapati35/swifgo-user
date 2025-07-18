@@ -36,6 +36,27 @@ class SocketService {
     _socket!.onError((error) => print('Socket Error: $error'));
   }
 
+  void initSocketForPassenger(String bookingId, Function(Map<String, dynamic>) onUpdate) {
+    onLocationUpdate = onUpdate;
+    final String serverUrl = 'ws://34.93.60.221:3001/tracking';
+    _socket = IO.io(serverUrl, <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+    _socket!.connect();
+    _socket!.onConnect((_) {
+      print('Socket connected (passenger)!');
+      _socket!.emit('joinBookingRoom', bookingId);
+    });
+    _socket!.on('driverLocationUpdate', (data) {
+      if (onLocationUpdate != null) {
+        onLocationUpdate!(data as Map<String, dynamic>);
+      }
+    });
+    _socket!.onDisconnect((_) => print('Socket disconnected'));
+    _socket!.onError((error) => print('Socket Error: $error'));
+  }
+
   void disconnect() {
     if (_socket != null) {
       _socket!.dispose();

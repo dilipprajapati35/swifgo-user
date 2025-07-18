@@ -76,7 +76,7 @@ class _MyridesupcomingState extends State<Myridesupcoming> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMapSection(ride),
+                      // _buildMapSection(ride),
                       _buildCrnRow(ride),
                       Divider(height: 1),
                       _buildLocationSection(ride),
@@ -140,17 +140,17 @@ class _MyridesupcomingState extends State<Myridesupcoming> {
               ),
             ),
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Color(0xff3E57B4),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Rich in 15 min',
-              style: GoogleFonts.nunito(color: Colors.white, fontSize: 13),
-            ),
-          ),
+          // Container(
+          //   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          //   decoration: BoxDecoration(
+          //     color: Color(0xff3E57B4),
+          //     borderRadius: BorderRadius.circular(20),
+          //   ),
+          //   child: Text(
+          //     'Rich in 15 min',
+          //     style: GoogleFonts.nunito(color: Colors.white, fontSize: 13),
+          //   ),
+          // ),
         ],
       ),
     );

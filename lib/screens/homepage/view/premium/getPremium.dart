@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'one_way_tab.dart';
 import 'round_trip_tab.dart';
-import 'package:flutter_arch/screens/homepage/view/premium/subscription_trip_selection_screen.dart';
 
 
 class Getpremium extends StatelessWidget {

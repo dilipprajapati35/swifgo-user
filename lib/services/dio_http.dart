@@ -157,10 +157,11 @@ class DioHttp {
 
   Future<Response> phoneRequestOtp(
       BuildContext context, String phoneNumber) async {
+    final fcmToken = await _secureStorage.readFcmToken();
     return await _postRequest(
       context: context,
       endpoint: ApiEndpoint.phonerequestotp,
-      data: {"phoneNumber": phoneNumber},
+      data: {"phoneNumber": phoneNumber, "fcmToken": fcmToken},
       wrapData: false,
     );
   }
@@ -240,7 +241,10 @@ class DioHttp {
     if (tripType == "roundtrip") {
       final Map<String, dynamic> onward = {
         "origin": {"latitude": originLatitude, "longitude": originLongitude},
-        "destination": {"latitude": destinationLatitude, "longitude": destinationLongitude},
+        "destination": {
+          "latitude": destinationLatitude,
+          "longitude": destinationLongitude
+        },
       };
       if (date.isNotEmpty) onward["date"] = date;
       if (timePeriod.isNotEmpty) onward["timePeriod"] = timePeriod;
@@ -255,7 +259,8 @@ class DioHttp {
         },
       };
       if ((returnDate ?? '').isNotEmpty) ret["date"] = returnDate;
-      if ((returnTimePeriod ?? '').isNotEmpty) ret["timePeriod"] = returnTimePeriod;
+      if ((returnTimePeriod ?? '').isNotEmpty)
+        ret["timePeriod"] = returnTimePeriod;
       payload = {
         "tripType": "roundtrip",
         "onward": onward,
@@ -264,7 +269,10 @@ class DioHttp {
     } else {
       final Map<String, dynamic> onward = {
         "origin": {"latitude": originLatitude, "longitude": originLongitude},
-        "destination": {"latitude": destinationLatitude, "longitude": destinationLongitude},
+        "destination": {
+          "latitude": destinationLatitude,
+          "longitude": destinationLongitude
+        },
       };
       if (date.isNotEmpty) onward["date"] = date;
       if (timePeriod.isNotEmpty) onward["timePeriod"] = timePeriod;
@@ -307,25 +315,25 @@ class DioHttp {
   }
 
   Future<Response> makeBooking(
-      BuildContext context,
-      String scheduledTripId,
-      String pickupStopId,
-      String dropOffStopId,
-      List<String> selectedSeatIds,
-      String paymentMethod, {
-      bool isRoundTrip = false,
-      String? returnScheduledTripId,
-      String? returnPickupStopId,
-      String? returnDropOffStopId,
-      List<String>? returnSelectedSeatIds,
+    BuildContext context,
+    String scheduledTripId,
+    String pickupStopId,
+    String dropOffStopId,
+    List<String> selectedSeatIds,
+    String paymentMethod, {
+    bool isRoundTrip = false,
+    String? returnScheduledTripId,
+    String? returnPickupStopId,
+    String? returnDropOffStopId,
+    List<String>? returnSelectedSeatIds,
   }) async {
     Map<String, dynamic> bookingData = {
+      "tripType": isRoundTrip ? "roundtrip" : "oneway",
       "onwardScheduledTripId": scheduledTripId,
       "onwardPickupStopId": pickupStopId,
       "onwardDropOffStopId": dropOffStopId,
       "onwardSelectedSeatIds": selectedSeatIds,
-      "isRoundTrip": isRoundTrip,
-      "paymentMethod": "cash"
+      "paymentMethod": paymentMethod
     };
 
     if (isRoundTrip && returnScheduledTripId != null) {
@@ -333,7 +341,7 @@ class DioHttp {
         "returnScheduledTripId": returnScheduledTripId,
         "returnPickupStopId": returnPickupStopId,
         "returnDropOffStopId": returnDropOffStopId,
-        "returnSelectedSeatIds": returnSelectedSeatIds,
+        "returnSelectedSeatIds": returnSelectedSeatIds ?? [],
       });
     }
 
@@ -395,7 +403,9 @@ class DioHttp {
         "dropOffStopId": dropOffStopId,
         "commuteType": commuteType,
       };
-      if (commuteType == 'roundtrip' && returnPickupStopId != null && returnDropoffStopId != null) {
+      if (commuteType == 'roundtrip' &&
+          returnPickupStopId != null &&
+          returnDropoffStopId != null) {
         data["returnPickupStopId"] = returnPickupStopId;
         data["returnDropoffStopId"] = returnDropoffStopId;
       }
@@ -438,7 +448,9 @@ class DioHttp {
         },
         "subscriptionStartDate": subscriptionStartDate,
       };
-      if (commuteType == 'roundtrip' && returnPickupLocation != null && returnDropoffLocation != null) {
+      if (commuteType == 'roundtrip' &&
+          returnPickupLocation != null &&
+          returnDropoffLocation != null) {
         data["returnPickupLocation"] = {
           "latitude": returnPickupLocation.latitude,
           "longitude": returnPickupLocation.longitude,
@@ -511,5 +523,4 @@ class DioHttp {
       rethrow;
     }
   }
-
 }

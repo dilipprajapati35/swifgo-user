@@ -39,6 +39,10 @@ dependencies:
   dotted_dashed_line: ^0.0.3
   country_code_picker: ^3.3.0
   socket_io_client: ^3.1.2
+  flutter_polyline_points: ^2.1.0
+  firebase_core: ^2.32.0
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications: ^19.2.1
 
 dev_dependencies:
   flutter_test:

@@ -5,7 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 class Paymentsuccess extends StatelessWidget {
-  const Paymentsuccess({super.key});
+  const Paymentsuccess({super.key, required this.price});
+  final String price;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +60,7 @@ class Paymentsuccess extends StatelessWidget {
                   ),
                   SizedBox(height: 10,),
                   Text(
-                    '₹500',
+                    price,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.nunito(
                       fontSize: 34,

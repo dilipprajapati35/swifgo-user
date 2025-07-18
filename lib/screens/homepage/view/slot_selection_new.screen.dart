@@ -57,6 +57,10 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
   late BookSeatModal _bookSeatModal;
   bool _roundTripNotAvailable = false;
 
+  // Store selected seats for onward and return
+  List<SeatInfo>? _onwardSelectedSeats;
+  List<SeatInfo>? _returnSelectedSeats;
+
   @override
   void initState() {
     super.initState();
@@ -123,37 +127,26 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
         ? _returnTrips.firstWhere((trip) => trip.scheduledTripId == _selectedReturnTripId)
         : _onwardTrips.firstWhere((trip) => trip.scheduledTripId == _selectedOnwardTripId);
     
-    // Create a new BookSeatModal instance for this specific trip
     BookSeatModal seatModal = BookSeatModal(
       onBookNow: (selectedSeats) {
         if (selectedSeats.isEmpty) {
-          toast("Please select at least one seat.", bgColor: Colors.orange);
+          // For both onward and return, enforce at least one seat selection
+          // No snackbar, just do not proceed
           return;
         }
-        
-        if (widget.tripType == 'roundtrip' && _returnTrips.isNotEmpty) {
-          // This is a round trip with both onward and return trips
+        if (widget.tripType == 'roundtrip') {
           if (!isReturn) {
-            // This is onward trip selection, now show return trip selection
-            _showReturnSeatSelection(selectedSeats);
+            // Store onward seats and open return seat selection
+            _onwardSelectedSeats = selectedSeats;
+            _showSeatSelection(isReturn: true);
           } else {
-            // This is return trip selection, proceed to payment with both selections
-            _proceedToPayment(selectedSeats);
+            // Store return seats and proceed to payment
+            _returnSelectedSeats = selectedSeats;
+            _proceedToPayment(_onwardSelectedSeats!, returnSeats: _returnSelectedSeats!);
           }
         } else {
-          // This is a one-way trip, proceed directly to payment
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PaymentScreen2(
-                selectedSeats: selectedSeats,
-                scheduledTripId: selectedTrip.scheduledTripId,
-                pickupStopId: selectedTrip.pickupStopId,
-                dropOffStopId: selectedTrip.destinationStopId,
-                isRoundTrip: false,
-              ),
-            ),
-          );
+          // One-way trip, proceed to payment
+          _proceedToPayment(selectedSeats);
         }
       },
     );
@@ -167,6 +160,14 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
       destinationAddress: selectedTrip.destinationLocationName,
       price: "₹${selectedTrip.price}",
       isRoundTrip: widget.tripType == 'roundtrip',
+      onwardPrice: selectedTrip.price,
+      // Only pass return trip info for onward seat selection (to show info in modal, not for seat IDs)
+      returnScheduledTripId: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).scheduledTripId : null,
+      returnPickupStopId: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).pickupStopId : null,
+      returnDropOffStopId: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).destinationStopId : null,
+      returnPickupAddress: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).pickupLocationName : null,
+      returnDestinationAddress: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).destinationLocationName : null,
+      returnPrice: !isReturn && widget.tripType == 'roundtrip' && _selectedReturnTripId != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).price : null,
     );
   }
 
@@ -194,12 +195,17 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
       destinationAddress: returnTrip.destinationLocationName,
       price: "₹${returnTrip.price}",
       isRoundTrip: true,
+      onwardPrice: onwardSeats.isNotEmpty ? _onwardTrips.firstWhere((t) => t.scheduledTripId == _selectedOnwardTripId).price : null,
+      returnPrice: returnTrip.price,
     );
   }
 
   void _proceedToPayment(List<SeatInfo> onwardSeats, {List<SeatInfo>? returnSeats}) {
     final onwardTrip = _onwardTrips.firstWhere((trip) => trip.scheduledTripId == _selectedOnwardTripId);
-    
+    final returnTrip = (_selectedReturnTripId != null && _returnTrips.isNotEmpty)
+        ? _returnTrips.firstWhere((trip) => trip.scheduledTripId == _selectedReturnTripId)
+        : null;
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -209,10 +215,11 @@ class _ChooseSlotPageState extends State<ChooseSlotPage> {
           pickupStopId: onwardTrip.pickupStopId,
           dropOffStopId: onwardTrip.destinationStopId,
           isRoundTrip: widget.tripType == 'roundtrip' && returnSeats != null,
-          returnScheduledTripId: returnSeats != null ? _selectedReturnTripId : null,
-          returnPickupStopId: returnSeats != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).pickupStopId : null,
-          returnDropOffStopId: returnSeats != null ? _returnTrips.firstWhere((t) => t.scheduledTripId == _selectedReturnTripId).destinationStopId : null,
-          returnSelectedSeatIds: returnSeats?.map((s) => s.id).toList(),
+          returnScheduledTripId: returnTrip?.scheduledTripId,
+          returnPickupStopId: returnTrip?.pickupStopId,
+          returnDropOffStopId: returnTrip?.destinationStopId,
+          returnSelectedSeatIds: returnSeats?.map((s) => s.id).toList() ?? [],
+          price: onwardTrip.price.toString(),
         ),
       ),
     );

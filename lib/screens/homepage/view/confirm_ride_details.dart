@@ -19,7 +19,8 @@ class ConfirmRideDetails extends StatefulWidget {
   final String dropOffStopId;
   final String pickupAddress;
   final String destinationAddress;
-  final String price;
+  final int onwardPrice;
+  final int? returnPrice;
   final bool isRoundTrip;
   final String? returnPickupAddress;
   final String? returnDestinationAddress;
@@ -36,7 +37,8 @@ class ConfirmRideDetails extends StatefulWidget {
     required this.dropOffStopId,
     required this.pickupAddress,
     required this.destinationAddress,
-    required this.price,
+    required this.onwardPrice,
+    this.returnPrice,
     this.isRoundTrip = false,
     this.returnPickupAddress,
     this.returnDestinationAddress,
@@ -126,6 +128,9 @@ class _ConfirmRideDetailsState extends State<ConfirmRideDetails> {
 
   @override
   Widget build(BuildContext context) {
+    final int totalPrice = widget.isRoundTrip && widget.returnPrice != null
+        ? widget.onwardPrice + widget.returnPrice!
+        : widget.onwardPrice;
     return Scaffold(
       backgroundColor: AppColor.greyWhite,
       appBar: _buildAppBar(context),
@@ -234,13 +239,14 @@ class _ConfirmRideDetailsState extends State<ConfirmRideDetails> {
                     ),
                   ),
                 ),
+               
                 Padding(
                   padding:
                       EdgeInsets.only(bottom: 25, left: 20, right: 20, top: 12),
                   child: AppPrimaryButton(
-                    text: widget.price, // Use the passed price
+                    text: 'Pay ₹$totalPrice',
                     onTap: () {
-                      // Navigate to PaymentScreen1
+                    // Navigate to PaymentScreen1
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -251,7 +257,7 @@ class _ConfirmRideDetailsState extends State<ConfirmRideDetails> {
                             dropOffStopId: widget.dropOffStopId,
                             pickupAddress: widget.pickupAddress,
                             destinationAddress: widget.destinationAddress,
-                            price: widget.price,
+                            price: '₹$totalPrice',
                             isRoundTrip: widget.isRoundTrip,
                             returnPickupAddress: widget.returnPickupAddress,
                             returnDestinationAddress: widget.returnDestinationAddress,

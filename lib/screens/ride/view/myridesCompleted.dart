@@ -67,7 +67,7 @@ class _MyridescompletedState extends State<Myridescompleted> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMapSection(ride),
+                      // _buildMapSection(ride),
                       _buildCrnRow(ride),
                       Divider(height: 1),
                       _buildLocationSection(ride),

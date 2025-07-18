@@ -93,7 +93,7 @@ class _Paymentscreen1State extends State<Paymentscreen1> {
                     ),
                     child: Center(
                       child: Text(
-                        'One Way',
+                        widget.isRoundTrip ? "Round Trip":'One Way',
                         style: GoogleFonts.nunito(
                           color: Colors.white,
                           fontSize: 15,
@@ -638,6 +638,7 @@ class _Paymentscreen1State extends State<Paymentscreen1> {
                       returnPickupStopId: widget.returnPickupStopId,
                       returnDropOffStopId: widget.returnDropOffStopId,
                       returnSelectedSeatIds: widget.returnSelectedSeats?.map((seat) => seat.id).toList(),
+                      price: widget.price,
                     ),
                   ),
                 );
