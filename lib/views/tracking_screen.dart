@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arch/screens/ride/view/ride_call_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:path/path.dart';
 import 'package:provider/provider.dart';
 import '../view_models/tracking_view_model.dart';
 

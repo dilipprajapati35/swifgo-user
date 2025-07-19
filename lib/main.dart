@@ -8,11 +8,41 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp();
-  await FirebaseMessagingService().initialize(null);
-  runApp(const MyApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Load environment variables with error handling
+    try {
+      await dotenv.load(fileName: ".env");
+      print("Environment variables loaded successfully");
+    } catch (e) {
+      print("Failed to load .env file: $e");
+      // Continue without .env file
+    }
+    
+    // Initialize Firebase with error handling
+    try {
+      await Firebase.initializeApp();
+      print("Firebase initialized successfully");
+    } catch (e) {
+      print("Failed to initialize Firebase: $e");
+      // Continue without Firebase
+    }
+    
+    // Initialize Firebase Messaging with error handling
+    try {
+      await FirebaseMessagingService().initialize(null);
+      print("Firebase Messaging initialized successfully");
+    } catch (e) {
+      print("Failed to initialize Firebase Messaging: $e");
+      // Continue without Firebase Messaging
+    }
+    
+    runApp(const MyApp());
+  } catch (e) {
+    print("Error in main: $e");
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatelessWidget {

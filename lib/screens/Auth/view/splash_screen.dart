@@ -22,20 +22,39 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkTokenAndNavigate() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
-    final token = await _secureStorage.readToken();
-    print("Token: $token");
-    
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-                  builder: (context) => token != null 
-            ? const MainNavigation() 
-            : const IntroScreen(),
-        ),
-      );
+    try {
+      await Future.delayed(const Duration(seconds: 2));
+      
+      String? token;
+      try {
+        token = await _secureStorage.readToken();
+        print("Token: $token");
+      } catch (e) {
+        print("Error reading token: $e");
+        token = null;
+      }
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => token != null 
+                ? const MainNavigation() 
+                : const IntroScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error in splash screen: $e");
+      // Fallback navigation
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const IntroScreen(),
+          ),
+        );
+      }
     }
   }
 

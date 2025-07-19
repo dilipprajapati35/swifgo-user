@@ -30,17 +30,22 @@ class FirebaseMessagingService {
   String? get fcmToken => _fcmToken;
 
   Future<void> initialize(BuildContext? context) async {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    try {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    await _requestPermission();
+      await _requestPermission();
 
-    await _initializeLocalNotifications();
+      await _initializeLocalNotifications();
 
-    await getToken();
+      await getToken();
 
-    _configureMessaging(context);
+      _configureMessaging(context);
 
-    log('Firebase Messaging initialized');
+      log('Firebase Messaging initialized');
+    } catch (e) {
+      log('Error initializing Firebase Messaging: $e');
+      // Continue without crashing the app
+    }
   }
 
   Future<void> _requestPermission() async {
@@ -55,36 +60,40 @@ class FirebaseMessagingService {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@drawable/ic_notification');
+    try {
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher'); // Fallback to app icon
 
-    const InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: null,
-    );
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: null,
+      );
 
-    await _flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        final payload = response.payload;
-        if (payload != null) {
-          log('Notification payload: $payload');
-        }
-      },
-    );
+      await _flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          final payload = response.payload;
+          if (payload != null) {
+            log('Notification payload: $payload');
+          }
+        },
+      );
 
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'high_importance_channel',
-      'High Importance Notifications',
-      description: 'This channel is used for important notifications.',
-      importance: Importance.max,
-    );
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'high_importance_channel',
+        'High Importance Notifications',
+        description: 'This channel is used for important notifications.',
+        importance: Importance.max,
+      );
 
-    await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+      await _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+    } catch (e) {
+      log('Error initializing local notifications: $e');
+    }
   }
 
   void _configureMessaging(BuildContext? context) {
@@ -162,7 +171,7 @@ class FirebaseMessagingService {
       'high_importance_channel',
       'High Importance Notifications',
       channelDescription: 'This channel is used for important notifications.',
-      icon: '@drawable/ic_notification',
+      icon: '@mipmap/ic_launcher', // Fallback to app icon
       priority: Priority.high,
       importance: Importance.max,
     );

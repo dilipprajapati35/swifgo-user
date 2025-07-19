@@ -22,7 +22,7 @@ class DioHttp {
 
   DioHttp()
       : _dio = Dio()..interceptors.add(DioInterceptor()),
-        _baseUrl = dotenv.env['BASE_URL']!,
+        _baseUrl = dotenv.env['BASE_URL'] ?? 'http://34.93.60.221:3001',
         _secureStorage = MySecureStorage();
 
   Future<Response> _postRequest({
