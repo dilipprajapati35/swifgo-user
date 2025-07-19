@@ -11,8 +11,8 @@ class TrackingScreen extends StatelessWidget {
   final LatLng? destinationPosition;
 
   const TrackingScreen({
-    Key? key, 
-    required this.bookingId, 
+    Key? key,
+    required this.bookingId,
     required this.userToken,
     this.pickupPosition,
     this.destinationPosition,
@@ -23,7 +23,7 @@ class TrackingScreen extends StatelessWidget {
     // Use ChangeNotifierProvider to provide the ViewModel to the widget tree
     return ChangeNotifierProvider(
       create: (_) => TrackingViewModel(
-        bookingId: bookingId, 
+        bookingId: bookingId,
         userToken: userToken,
         pickupPosition: pickupPosition,
         destinationPosition: destinationPosition,
@@ -42,7 +42,8 @@ class TrackingScreen extends StatelessWidget {
                 children: [
                   GoogleMap(
                     initialCameraPosition: CameraPosition(
-                      target: viewModel.pickupPosition ?? LatLng(28.6139, 77.2090),
+                      target:
+                          viewModel.pickupPosition ?? LatLng(28.6139, 77.2090),
                       zoom: 16,
                     ),
                     markers: {},
@@ -51,14 +52,18 @@ class TrackingScreen extends StatelessWidget {
                     alignment: Alignment.topCenter,
                     child: Container(
                       margin: EdgeInsets.only(top: 40, left: 24, right: 24),
-                      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      padding:
+                          EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'The ride has not started yet.\nTracking will begin once your ride starts.',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -82,14 +87,14 @@ class TrackingScreen extends StatelessWidget {
 
   Widget _buildTrackingMap(TrackingViewModel viewModel) {
     Set<Marker> markers = {};
-    
+
     // Add driver marker
     if (viewModel.driverPosition != null) {
       markers.add(
         Marker(
           markerId: MarkerId('driver'),
           position: viewModel.driverPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          icon: viewModel.driverIcon,
           infoWindow: InfoWindow(title: 'Driver'),
         ),
       );
@@ -102,7 +107,8 @@ class TrackingScreen extends StatelessWidget {
         Marker(
           markerId: MarkerId('pickup'),
           position: viewModel.pickupPosition!,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(title: 'Pickup Location'),
         ),
       );
@@ -132,10 +138,10 @@ class TrackingScreen extends StatelessWidget {
 
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: viewModel.driverPosition ?? 
-                viewModel.pickupPosition ?? 
-                viewModel.destination ?? 
-                LatLng(28.6139, 77.2090),
+        target: viewModel.driverPosition ??
+            viewModel.pickupPosition ??
+            viewModel.destination ??
+            LatLng(28.6139, 77.2090),
         zoom: 15,
       ),
       markers: markers,
@@ -149,7 +155,7 @@ class TrackingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTrackingInfo(BuildContext context,TrackingViewModel viewModel) {
+  Widget _buildTrackingInfo(BuildContext context, TrackingViewModel viewModel) {
     return Positioned(
       bottom: 0,
       left: 0,
@@ -183,7 +189,7 @@ class TrackingScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
-            
+
             // Driver status
             Row(
               children: [
@@ -198,8 +204,8 @@ class TrackingScreen extends StatelessWidget {
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    viewModel.rideStarted 
-                        ? 'Ride in Progress' 
+                    viewModel.rideStarted
+                        ? 'Ride in Progress'
                         : 'Driver is coming to pick you up',
                     style: TextStyle(
                       fontSize: 16,
@@ -210,11 +216,12 @@ class TrackingScreen extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 16),
-            
+
             // Distance and time info
-            if (viewModel.distanceToPickup != null && viewModel.estimatedArrivalTime != null)
+            if (viewModel.distanceToPickup != null &&
+                viewModel.estimatedArrivalTime != null)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -260,9 +267,9 @@ class TrackingScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            
+
             SizedBox(height: 20),
-            
+
             // Call driver button
             SizedBox(
               width: double.infinity,
@@ -271,9 +278,7 @@ class TrackingScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => RideCallScreen()
-                    ),
+                    MaterialPageRoute(builder: (context) => RideCallScreen()),
                   );
                 },
                 icon: Icon(Icons.phone, color: Colors.white),
@@ -299,12 +304,13 @@ class TrackingScreen extends StatelessWidget {
     );
   }
 
-  void _fitMapBounds(GoogleMapController controller, TrackingViewModel viewModel) {
+  void _fitMapBounds(
+      GoogleMapController controller, TrackingViewModel viewModel) {
     if (viewModel.driverPosition != null) {
-      LatLng destination = viewModel.rideStarted 
+      LatLng destination = viewModel.rideStarted
           ? (viewModel.destination ?? viewModel.driverPosition!)
           : (viewModel.pickupPosition ?? viewModel.driverPosition!);
-      
+
       // Calculate bounds to include both driver and destination
       double minLat = viewModel.driverPosition!.latitude < destination.latitude
           ? viewModel.driverPosition!.latitude
@@ -312,12 +318,14 @@ class TrackingScreen extends StatelessWidget {
       double maxLat = viewModel.driverPosition!.latitude > destination.latitude
           ? viewModel.driverPosition!.latitude
           : destination.latitude;
-      double minLng = viewModel.driverPosition!.longitude < destination.longitude
-          ? viewModel.driverPosition!.longitude
-          : destination.longitude;
-      double maxLng = viewModel.driverPosition!.longitude > destination.longitude
-          ? viewModel.driverPosition!.longitude
-          : destination.longitude;
+      double minLng =
+          viewModel.driverPosition!.longitude < destination.longitude
+              ? viewModel.driverPosition!.longitude
+              : destination.longitude;
+      double maxLng =
+          viewModel.driverPosition!.longitude > destination.longitude
+              ? viewModel.driverPosition!.longitude
+              : destination.longitude;
 
       controller.animateCamera(
         CameraUpdate.newLatLngBounds(
@@ -330,6 +338,4 @@ class TrackingScreen extends StatelessWidget {
       );
     }
   }
-
-  
 }

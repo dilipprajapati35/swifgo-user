@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -11,16 +13,29 @@ class TrackingViewModel extends ChangeNotifier {
   final String bookingId;
   final String userToken;
   final SocketService _socketService = SocketService();
+  BitmapDescriptor driverIcon = BitmapDescriptor.defaultMarker;
 
   TrackingViewModel({
-    required this.bookingId, 
-    required this.userToken, 
+    required this.bookingId,
+    required this.userToken,
     this.pickupPosition,
     LatLng? destinationPosition,
   }) {
     this.destinationPosition = destinationPosition;
     _startTrackingFlow();
     _getPassengerLocation();
+    loadCustomMarker();
+  }
+
+  void loadCustomMarker() async {
+    driverIcon = await BitmapDescriptor.asset(
+      // The ImageConfiguration is needed to find the correct asset resolutions
+      // You can change the size to whatever you need
+      const ImageConfiguration(size: Size(48, 48)),
+      'assets/images/car-top.png', // This is the path to your asset
+    );
+    // You need to call setState to redraw the widget with the new icon
+    notifyListeners();
   }
 
   bool _isLoading = true;
@@ -53,19 +68,23 @@ class TrackingViewModel extends ChangeNotifier {
   double? _distanceToPickup;
   double? get distanceToPickup => _distanceToPickup;
 
-  static const String _googleApiKey = 'AIzaSyCXvZ6f1LTP07lD6zhqnozAG20MzlUjis8'; // TODO: Replace with your key or env
+  static const String _googleApiKey =
+      'AIzaSyCXvZ6f1LTP07lD6zhqnozAG20MzlUjis8'; // TODO: Replace with your key or env
 
   void _startTrackingFlow() async {
     await _fetchInitialStatus();
     // If waiting, start polling every 15 seconds
     if (_waitingForRide) {
-      _pollingTimer = Timer.periodic(Duration(seconds: 15), (_) => _fetchInitialStatus());
+      _pollingTimer =
+          Timer.periodic(Duration(seconds: 15), (_) => _fetchInitialStatus());
     }
   }
 
   Future<void> _fetchInitialStatus() async {
+    log('Fetching initial status for bookingId: $bookingId');
     try {
-      final Uri url = Uri.parse('http://34.93.60.221:3001/bookings/$bookingId/track');
+      final Uri url =
+          Uri.parse('http://34.93.60.221:3001/bookings/$bookingId/track');
       final response = await http.get(
         url,
         headers: {'Authorization': 'Bearer $userToken'},
@@ -80,11 +99,14 @@ class TrackingViewModel extends ChangeNotifier {
         }
         // Optionally get pickup position from API if available
         if (data['pickupLatitude'] != null && data['pickupLongitude'] != null) {
-          pickupPosition = LatLng(data['pickupLatitude'], data['pickupLongitude']);
+          pickupPosition =
+              LatLng(data['pickupLatitude'], data['pickupLongitude']);
         }
         // Get destination position from API if available
-        if (data['destinationLatitude'] != null && data['destinationLongitude'] != null) {
-          destinationPosition = LatLng(data['destinationLatitude'], data['destinationLongitude']);
+        if (data['destinationLatitude'] != null &&
+            data['destinationLongitude'] != null) {
+          destinationPosition =
+              LatLng(data['destinationLatitude'], data['destinationLongitude']);
         }
         // Connect to WebSocket for live updates
         _connectWebSocket();
@@ -94,11 +116,15 @@ class TrackingViewModel extends ChangeNotifier {
         // Optionally get pickup position from API if available
         try {
           final data = json.decode(response.body);
-          if (data['pickupLatitude'] != null && data['pickupLongitude'] != null) {
-            pickupPosition = LatLng(data['pickupLatitude'], data['pickupLongitude']);
+          if (data['pickupLatitude'] != null &&
+              data['pickupLongitude'] != null) {
+            pickupPosition =
+                LatLng(data['pickupLatitude'], data['pickupLongitude']);
           }
-          if (data['destinationLatitude'] != null && data['destinationLongitude'] != null) {
-            destinationPosition = LatLng(data['destinationLatitude'], data['destinationLongitude']);
+          if (data['destinationLatitude'] != null &&
+              data['destinationLongitude'] != null) {
+            destinationPosition = LatLng(
+                data['destinationLatitude'], data['destinationLongitude']);
           }
         } catch (_) {}
       } else {
@@ -114,7 +140,9 @@ class TrackingViewModel extends ChangeNotifier {
 
   void _connectWebSocket() {
     _socketService.initSocketForPassenger(bookingId, (locationData) {
-      _driverPosition = LatLng(locationData['latitude'], locationData['longitude']);
+      log('Driver location update: $locationData');
+      _driverPosition =
+          LatLng(locationData['latitude'], locationData['longitude']);
       _rideStarted = locationData['rideStarted'] ?? _rideStarted;
       _updateRoutePolyline();
       notifyListeners();
@@ -131,7 +159,8 @@ class TrackingViewModel extends ChangeNotifier {
         if (permission == LocationPermission.denied) return;
       }
       if (permission == LocationPermission.deniedForever) return;
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
       _passengerPosition = LatLng(position.latitude, position.longitude);
       _updateRoutePolyline();
       notifyListeners();
@@ -140,81 +169,84 @@ class TrackingViewModel extends ChangeNotifier {
     }
   }
 
-Future<void> _updateRoutePolyline() async {
-  if (_driverPosition == null) {
-    _polylinePoints = [];
-    notifyListeners();
-    return;
-  }
-
-  LatLng? destination;
-  
-  // If ride hasn't started, show route from driver to pickup location
-  if (!_rideStarted && pickupPosition != null) {
-    destination = pickupPosition;
-  } 
-  // If ride has started, show route from driver to passenger destination
-  else if (_rideStarted && destinationPosition != null) {
-    destination = destinationPosition;
-  }
-
-  if (destination == null) {
-    _polylinePoints = [];
-    notifyListeners();
-    return;
-  }
-
-  try {
-    PolylinePoints polylinePoints = PolylinePoints();
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-      googleApiKey: _googleApiKey,
-      request: PolylineRequest(
-        origin: PointLatLng(_driverPosition!.latitude, _driverPosition!.longitude),
-        destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving,
-      ),
-    );
-    
-    if (result.points.isNotEmpty) {
-      _polylinePoints = result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
-      
-      // Calculate distance and estimated time
-      _calculateDistanceAndTime(result);
-    } else {
+  Future<void> _updateRoutePolyline() async {
+    if (_driverPosition == null) {
       _polylinePoints = [];
+      notifyListeners();
+      return;
     }
-    notifyListeners();
-  } catch (e) {
-    print('Error fetching polyline: $e');
-    _polylinePoints = [];
-    notifyListeners();
-  }
-}
 
-void _calculateDistanceAndTime(PolylineResult result) {
-  if (result.points.isNotEmpty && _driverPosition != null) {
-    // Calculate total distance
-    double totalDistance = 0;
-    for (int i = 0; i < result.points.length - 1; i++) {
-      totalDistance += Geolocator.distanceBetween(
-        result.points[i].latitude,
-        result.points[i].longitude,
-        result.points[i + 1].latitude,
-        result.points[i + 1].longitude,
-      );
+    LatLng? destination;
+
+    // If ride hasn't started, show route from driver to pickup location
+    if (!_rideStarted && pickupPosition != null) {
+      destination = pickupPosition;
     }
-    
-    _distanceToPickup = totalDistance / 1000; // Convert to km
-    
-    // Estimate time (assuming average speed of 30 km/h in city)
-    double estimatedMinutes = (_distanceToPickup! / 30) * 60;
-    _estimatedArrivalTime = '${estimatedMinutes.round()} min';
+    // If ride has started, show route from driver to passenger destination
+    else if (_rideStarted && destinationPosition != null) {
+      destination = destinationPosition;
+    }
+
+    if (destination == null) {
+      _polylinePoints = [];
+      notifyListeners();
+      return;
+    }
+
+    try {
+      PolylinePoints polylinePoints = PolylinePoints();
+      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+        googleApiKey: _googleApiKey,
+        request: PolylineRequest(
+          origin: PointLatLng(
+              _driverPosition!.latitude, _driverPosition!.longitude),
+          destination: PointLatLng(destination.latitude, destination.longitude),
+          mode: TravelMode.driving,
+        ),
+      );
+
+      if (result.points.isNotEmpty) {
+        _polylinePoints =
+            result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
+
+        // Calculate distance and estimated time
+        _calculateDistanceAndTime(result);
+      } else {
+        _polylinePoints = [];
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching polyline: $e');
+      _polylinePoints = [];
+      notifyListeners();
+    }
   }
-}
+
+  void _calculateDistanceAndTime(PolylineResult result) {
+    if (result.points.isNotEmpty && _driverPosition != null) {
+      // Calculate total distance
+      double totalDistance = 0;
+      for (int i = 0; i < result.points.length - 1; i++) {
+        totalDistance += Geolocator.distanceBetween(
+          result.points[i].latitude,
+          result.points[i].longitude,
+          result.points[i + 1].latitude,
+          result.points[i + 1].longitude,
+        );
+      }
+
+      _distanceToPickup = totalDistance / 1000; // Convert to km
+
+      // Estimate time (assuming average speed of 30 km/h in city)
+      double estimatedMinutes = (_distanceToPickup! / 30) * 60;
+      _estimatedArrivalTime = '${estimatedMinutes.round()} min';
+    }
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();
     _socketService.disconnect();
     super.dispose();
   }
-} 
+}
