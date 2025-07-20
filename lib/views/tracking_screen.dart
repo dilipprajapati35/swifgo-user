@@ -29,7 +29,42 @@ class TrackingScreen extends StatelessWidget {
         destinationPosition: destinationPosition,
       ),
       child: Scaffold(
-        appBar: AppBar(title: Text('Track Your Ride')),
+        appBar: AppBar(
+          title: Text('Track Your Ride'),
+          actions: [
+            // Connection status indicator
+            Consumer<TrackingViewModel>(
+              builder: (context, viewModel, child) {
+                return Container(
+                  margin: EdgeInsets.only(right: 16),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        size: 12,
+                        color: viewModel.isSocketConnected ? Colors.green : Colors.red,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        viewModel.isSocketConnected ? 'Live (2s)' : 'Offline',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      SizedBox(width: 8),
+                      // Refresh button
+                      GestureDetector(
+                        onTap: () {
+                          viewModel.refreshConnection();
+                        },
+                        child: Icon(Icons.refresh, size: 20),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
         body: Consumer<TrackingViewModel>(
           builder: (context, viewModel, child) {
             if (viewModel.isLoading) {
@@ -268,7 +303,7 @@ class TrackingScreen extends StatelessWidget {
                 ],
               ),
 
-            SizedBox(height: 20),
+            SizedBox(height: 20),           
 
             // Call driver button
             SizedBox(

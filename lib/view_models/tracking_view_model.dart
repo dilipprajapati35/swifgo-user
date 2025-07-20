@@ -25,6 +25,14 @@ class TrackingViewModel extends ChangeNotifier {
     _startTrackingFlow();
     _getPassengerLocation();
     loadCustomMarker();
+    _startUIUpdateTimer();
+  }
+
+  void _startUIUpdateTimer() {
+    // Update UI every second to refresh the "last update" time
+    _uiUpdateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      notifyListeners();
+    });
   }
 
   void loadCustomMarker() async {
@@ -55,6 +63,7 @@ class TrackingViewModel extends ChangeNotifier {
   LatLng? get destination => destinationPosition;
 
   Timer? _pollingTimer;
+  Timer? _uiUpdateTimer;
 
   List<LatLng> _polylinePoints = [];
   List<LatLng> get polylinePoints => _polylinePoints;
@@ -67,6 +76,9 @@ class TrackingViewModel extends ChangeNotifier {
 
   double? _distanceToPickup;
   double? get distanceToPickup => _distanceToPickup;
+
+  DateTime? _lastLocationUpdate;
+  DateTime? get lastLocationUpdate => _lastLocationUpdate;
 
   static const String _googleApiKey =
       'AIzaSyCXvZ6f1LTP07lD6zhqnozAG20MzlUjis8'; // TODO: Replace with your key or env
@@ -85,33 +97,49 @@ class TrackingViewModel extends ChangeNotifier {
     try {
       final Uri url =
           Uri.parse('http://34.93.60.221:3001/bookings/$bookingId/track');
+      log('Making API call to: $url');
+      
       final response = await http.get(
         url,
         headers: {'Authorization': 'Bearer $userToken'},
       );
+      
+      log('API response status: ${response.statusCode}');
+      log('API response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _waitingForRide = false;
         _rideStarted = data['rideStarted'] ?? false;
+        
+        log('Ride started status from API: $_rideStarted');
+        
         if (data['latitude'] != null && data['longitude'] != null) {
           _driverPosition = LatLng(data['latitude'], data['longitude']);
+          log('Driver position from API: ${_driverPosition?.latitude}, ${_driverPosition?.longitude}');
           _updateRoutePolyline();
         }
+        
         // Optionally get pickup position from API if available
         if (data['pickupLatitude'] != null && data['pickupLongitude'] != null) {
           pickupPosition =
               LatLng(data['pickupLatitude'], data['pickupLongitude']);
+          log('Pickup position: ${pickupPosition?.latitude}, ${pickupPosition?.longitude}');
         }
+        
         // Get destination position from API if available
         if (data['destinationLatitude'] != null &&
             data['destinationLongitude'] != null) {
           destinationPosition =
               LatLng(data['destinationLatitude'], data['destinationLongitude']);
+          log('Destination position: ${destinationPosition?.latitude}, ${destinationPosition?.longitude}');
         }
+        
         // Connect to WebSocket for live updates
         _connectWebSocket();
         _pollingTimer?.cancel();
       } else if (response.statusCode == 403) {
+        log('Ride has not started yet (403 response)');
         _waitingForRide = true;
         // Optionally get pickup position from API if available
         try {
@@ -128,10 +156,10 @@ class TrackingViewModel extends ChangeNotifier {
           }
         } catch (_) {}
       } else {
-        print('Failed to get tracking info:  [31m${response.body} [0m');
+        log('Failed to get tracking info: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error starting tracking: $e');
+      log('Error starting tracking: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -139,13 +167,38 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   void _connectWebSocket() {
+    log('Setting up WebSocket connection for booking: $bookingId');
     _socketService.initSocketForPassenger(bookingId, (locationData) {
-      log('Driver location update: $locationData');
-      _driverPosition =
-          LatLng(locationData['latitude'], locationData['longitude']);
-      _rideStarted = locationData['rideStarted'] ?? _rideStarted;
-      _updateRoutePolyline();
-      notifyListeners();
+      log('Driver location update received: $locationData');
+      
+      try {
+        // Make sure we have valid location data
+        if (locationData['latitude'] != null && locationData['longitude'] != null) {
+          _driverPosition = LatLng(
+            double.parse(locationData['latitude'].toString()), 
+            double.parse(locationData['longitude'].toString())
+          );
+          
+          // Update ride status if provided
+          if (locationData['rideStarted'] != null) {
+            _rideStarted = locationData['rideStarted'] as bool;
+          }
+          
+          log('Driver position updated to: ${_driverPosition?.latitude}, ${_driverPosition?.longitude}');
+          log('Ride started status: $_rideStarted');
+          
+          // Update last location update time
+          _lastLocationUpdate = DateTime.now();
+          
+          // Update route and notify listeners
+          _updateRoutePolyline();
+          notifyListeners();
+        } else {
+          log('Invalid location data received: $locationData');
+        }
+      } catch (e) {
+        log('Error processing location update: $e');
+      }
     });
   }
 
@@ -245,8 +298,19 @@ class TrackingViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    log('Disposing TrackingViewModel');
     _pollingTimer?.cancel();
+    _uiUpdateTimer?.cancel();
     _socketService.disconnect();
     super.dispose();
   }
+
+  // Method to manually refresh connection
+  void refreshConnection() {
+    log('Manually refreshing WebSocket connection');
+    _socketService.forceRefresh();
+  }
+
+  // Method to check socket connection status
+  bool get isSocketConnected => _socketService.isConnected;
 }
