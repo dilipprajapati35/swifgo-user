@@ -9,6 +9,7 @@ enum ApiEndpoint {
   bookings('/bookings'),
   kycverifyotp('/auth/kyc/verify-otp'),
   subscriptionPlans('/subscription-plans'),
+  fcmToken('/users/me/fcm-token'),
   myRides('/bookings/my-rides');
   
 

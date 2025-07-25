@@ -27,12 +27,6 @@ class _AadharOtpVerificationScreenState
   DioHttp dio = DioHttp();
   bool isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-
-    // Removed auto-fill functionality - users will enter OTP manually
-  }
 
   Future<bool> verifyOtpWithApi(String otp) async {
     if (widget.aadhaarNumber != null && widget.transactionId != null) {

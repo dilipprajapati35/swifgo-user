@@ -2,8 +2,6 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../services/socket_service.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
@@ -71,6 +69,9 @@ class TrackingViewModel extends ChangeNotifier {
   bool _rideStarted = false;
   bool get rideStarted => _rideStarted;
 
+  bool _isWebSocketConnected = false;
+  bool get isWebSocketConnected => _isWebSocketConnected;
+
   String? _estimatedArrivalTime;
   String? get estimatedArrivalTime => _estimatedArrivalTime;
 
@@ -84,122 +85,61 @@ class TrackingViewModel extends ChangeNotifier {
       'AIzaSyCXvZ6f1LTP07lD6zhqnozAG20MzlUjis8'; // TODO: Replace with your key or env
 
   void _startTrackingFlow() async {
-    await _fetchInitialStatus();
-    // If waiting, start polling every 15 seconds
-    if (_waitingForRide) {
-      _pollingTimer =
-          Timer.periodic(Duration(seconds: 15), (_) => _fetchInitialStatus());
-    }
-  }
-
-  Future<void> _fetchInitialStatus() async {
-    log('Fetching initial status for bookingId: $bookingId');
-    try {
-      final Uri url =
-          Uri.parse('http://34.93.60.221:3001/bookings/$bookingId/track');
-      log('Making API call to: $url');
-      
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $userToken'},
-      );
-      
-      log('API response status: ${response.statusCode}');
-      log('API response body: ${response.body}');
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _waitingForRide = false;
-        _rideStarted = data['rideStarted'] ?? false;
-        
-        log('Ride started status from API: $_rideStarted');
-        
-        if (data['latitude'] != null && data['longitude'] != null) {
-          _driverPosition = LatLng(data['latitude'], data['longitude']);
-          log('Driver position from API: ${_driverPosition?.latitude}, ${_driverPosition?.longitude}');
-          _updateRoutePolyline();
-        }
-        
-        // Optionally get pickup position from API if available
-        if (data['pickupLatitude'] != null && data['pickupLongitude'] != null) {
-          pickupPosition =
-              LatLng(data['pickupLatitude'], data['pickupLongitude']);
-          log('Pickup position: ${pickupPosition?.latitude}, ${pickupPosition?.longitude}');
-        }
-        
-        // Get destination position from API if available
-        if (data['destinationLatitude'] != null &&
-            data['destinationLongitude'] != null) {
-          destinationPosition =
-              LatLng(data['destinationLatitude'], data['destinationLongitude']);
-          log('Destination position: ${destinationPosition?.latitude}, ${destinationPosition?.longitude}');
-        }
-        
-        // Connect to WebSocket for live updates
-        _connectWebSocket();
-        _pollingTimer?.cancel();
-      } else if (response.statusCode == 403) {
-        log('Ride has not started yet (403 response)');
-        _waitingForRide = true;
-        // Optionally get pickup position from API if available
-        try {
-          final data = json.decode(response.body);
-          if (data['pickupLatitude'] != null &&
-              data['pickupLongitude'] != null) {
-            pickupPosition =
-                LatLng(data['pickupLatitude'], data['pickupLongitude']);
-          }
-          if (data['destinationLatitude'] != null &&
-              data['destinationLongitude'] != null) {
-            destinationPosition = LatLng(
-                data['destinationLatitude'], data['destinationLongitude']);
-          }
-        } catch (_) {}
-      } else {
-        log('Failed to get tracking info: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      log('Error starting tracking: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    // Connect directly to WebSocket for live tracking
+    // No more polling - pure real-time updates
+    _connectWebSocket();
+    _isLoading = false;
+    _waitingForRide = false; // Since we only show tracking when canTrack is true
+    notifyListeners();
   }
 
   void _connectWebSocket() {
-    log('Setting up WebSocket connection for booking: $bookingId');
-    _socketService.initSocketForPassenger(bookingId, (locationData) {
-      log('Driver location update received: $locationData');
-      
-      try {
-        // Make sure we have valid location data
-        if (locationData['latitude'] != null && locationData['longitude'] != null) {
-          _driverPosition = LatLng(
-            double.parse(locationData['latitude'].toString()), 
-            double.parse(locationData['longitude'].toString())
-          );
-          
-          // Update ride status if provided
-          if (locationData['rideStarted'] != null) {
-            _rideStarted = locationData['rideStarted'] as bool;
+    log('📻 Connecting to live tracking channel for booking: $bookingId');
+    _socketService.initSocketForPassenger(
+      bookingId, 
+      (locationData) {
+        log('📍 Live driver location received: $locationData');
+        
+        try {
+          // Make sure we have valid location data as per guide format
+          if (locationData['latitude'] != null && locationData['longitude'] != null) {
+            final newDriverPosition = LatLng(
+              double.parse(locationData['latitude'].toString()), 
+              double.parse(locationData['longitude'].toString())
+            );
+            
+            // Only update if position actually changed to avoid unnecessary redraws
+            if (_driverPosition != newDriverPosition) {
+              _driverPosition = newDriverPosition;
+              
+              // Update ride status if provided
+              if (locationData['rideStarted'] != null) {
+                _rideStarted = locationData['rideStarted'] as bool;
+              }
+              
+              log('🚗 Driver position updated to: ${_driverPosition?.latitude}, ${_driverPosition?.longitude}');
+              log('🚦 Ride started status: $_rideStarted');
+              
+              // Update last location update time
+              _lastLocationUpdate = DateTime.now();
+              
+              // Update route and notify listeners
+              _updateRoutePolyline();
+              notifyListeners();
+            }
+          } else {
+            log('❌ Invalid location data received: $locationData');
           }
-          
-          log('Driver position updated to: ${_driverPosition?.latitude}, ${_driverPosition?.longitude}');
-          log('Ride started status: $_rideStarted');
-          
-          // Update last location update time
-          _lastLocationUpdate = DateTime.now();
-          
-          // Update route and notify listeners
-          _updateRoutePolyline();
-          notifyListeners();
-        } else {
-          log('Invalid location data received: $locationData');
+        } catch (e) {
+          log('❌ Error processing location update: $e');
         }
-      } catch (e) {
-        log('Error processing location update: $e');
+      },
+      onConnectionChange: (isConnected) {
+        log(isConnected ? '📻 Live tracking connected!' : '📻 Live tracking disconnected...');
+        _isWebSocketConnected = isConnected;
+        notifyListeners();
       }
-    });
+    );
   }
 
   Future<void> _getPassengerLocation() async {
@@ -223,24 +163,7 @@ class TrackingViewModel extends ChangeNotifier {
   }
 
   Future<void> _updateRoutePolyline() async {
-    if (_driverPosition == null) {
-      _polylinePoints = [];
-      notifyListeners();
-      return;
-    }
-
-    LatLng? destination;
-
-    // If ride hasn't started, show route from driver to pickup location
-    if (!_rideStarted && pickupPosition != null) {
-      destination = pickupPosition;
-    }
-    // If ride has started, show route from driver to passenger destination
-    else if (_rideStarted && destinationPosition != null) {
-      destination = destinationPosition;
-    }
-
-    if (destination == null) {
+    if (_driverPosition == null || _passengerPosition == null) {
       _polylinePoints = [];
       notifyListeners();
       return;
@@ -248,36 +171,48 @@ class TrackingViewModel extends ChangeNotifier {
 
     try {
       PolylinePoints polylinePoints = PolylinePoints();
+      
+      // Show route from driver's current position to passenger's current position
       PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
         googleApiKey: _googleApiKey,
         request: PolylineRequest(
           origin: PointLatLng(
-              _driverPosition!.latitude, _driverPosition!.longitude),
-          destination: PointLatLng(destination.latitude, destination.longitude),
+            _driverPosition!.latitude, 
+            _driverPosition!.longitude
+          ),
+          destination: PointLatLng(
+            _passengerPosition!.latitude, 
+            _passengerPosition!.longitude
+          ),
           mode: TravelMode.driving,
         ),
       );
 
       if (result.points.isNotEmpty) {
-        _polylinePoints =
-            result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
+        _polylinePoints = result.points
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
 
-        // Calculate distance and estimated time
+        // Calculate distance and estimated time between driver and passenger
         _calculateDistanceAndTime(result);
+        
+        log('📍 Route updated: ${result.points.length} points from driver to passenger');
       } else {
         _polylinePoints = [];
+        log('❌ No route found between driver and passenger');
       }
+      
       notifyListeners();
     } catch (e) {
-      print('Error fetching polyline: $e');
+      log('❌ Error fetching route polyline: $e');
       _polylinePoints = [];
       notifyListeners();
     }
   }
 
   void _calculateDistanceAndTime(PolylineResult result) {
-    if (result.points.isNotEmpty && _driverPosition != null) {
-      // Calculate total distance
+    if (result.points.isNotEmpty && _driverPosition != null && _passengerPosition != null) {
+      // Calculate total distance along the route
       double totalDistance = 0;
       for (int i = 0; i < result.points.length - 1; i++) {
         totalDistance += Geolocator.distanceBetween(
@@ -293,14 +228,20 @@ class TrackingViewModel extends ChangeNotifier {
       // Estimate time (assuming average speed of 30 km/h in city)
       double estimatedMinutes = (_distanceToPickup! / 30) * 60;
       _estimatedArrivalTime = '${estimatedMinutes.round()} min';
+      
+      log('📏 Distance from driver to passenger: ${_distanceToPickup!.toStringAsFixed(1)} km');
+      log('⏱️ Estimated arrival time: $_estimatedArrivalTime');
     }
   }
 
   @override
   void dispose() {
-    log('Disposing TrackingViewModel');
+    log('📻 Disposing TrackingViewModel - cleaning up live tracking');
     _pollingTimer?.cancel();
     _uiUpdateTimer?.cancel();
+    
+    // Leave the booking room first, then disconnect
+    _socketService.leaveBookingRoom(bookingId);
     _socketService.disconnect();
     super.dispose();
   }

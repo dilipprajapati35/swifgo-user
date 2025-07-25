@@ -144,6 +144,7 @@ class _TripCard extends StatelessWidget {
   const _TripCard({required this.trip, required this.isSelected, required this.onTap});
   @override
   Widget build(BuildContext context) {
+    final stops = trip.stops;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -162,8 +163,33 @@ class _TripCard extends StatelessWidget {
           children: [
             Text(trip.routeName, style: AppStyle.title.copyWith(fontSize: 15)),
             4.height,
-            Text('Pickup: ${trip.pickupLocationName}', style: AppStyle.caption1w400),
-            Text('Destination: ${trip.destinationLocationName}', style: AppStyle.caption1w400),
+            if (stops.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.green, size: 18),
+                  6.width,
+                  Expanded(child: Text('Pickup: ${stops.first['name']}', style: AppStyle.caption1w400)),
+                ],
+              ),
+              if (stops.length > 2)
+                ...List.generate(stops.length - 2, (i) => Row(
+                  children: [
+                    Icon(Icons.more_vert, color: Colors.blueGrey, size: 16),
+                    6.width,
+                    Expanded(child: Text('Stop: ${stops[i+1]['name']}', style: AppStyle.caption1w400)),
+                  ],
+                )),
+              Row(
+                children: [
+                  Icon(Icons.flag, color: Colors.red, size: 18),
+                  6.width,
+                  Expanded(child: Text('Destination: ${stops.last['name']}', style: AppStyle.caption1w400)),
+                ],
+              ),
+            ] else ...[
+              Text('Pickup: ${trip.pickupLocationName}', style: AppStyle.caption1w400),
+              Text('Destination: ${trip.destinationLocationName}', style: AppStyle.caption1w400),
+            ],
             4.height,
             Text('Price: ₹${trip.price}', style: AppStyle.caption1w600.copyWith(color: AppColor.buttonColor)),
             Text('Available seats: ${trip.availableSeats}', style: AppStyle.caption1w400),

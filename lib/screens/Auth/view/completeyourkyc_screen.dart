@@ -72,9 +72,9 @@ class _Complete_Kyc_ScreenState extends State<Complete_Kyc_Screen> {
             15.height,
             GestureDetector(
               onTap: () {
-                Navigator.pushReplacement(
-                  context,
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => MainNavigation()),
+                  (Route<dynamic> route) => false,
                 );
               },
               child: Align(
@@ -116,8 +116,6 @@ class _Complete_Kyc_ScreenState extends State<Complete_Kyc_Screen> {
                   if (response.statusCode == 200) {
                     MySnackBar.showSnackBar(context, response.data['message']);
                     final transactionId = response.data['transactionId'];
-
-                    // Extract testing OTP if available
                     String? testOtp =
                         response.data['otpForTesting']?.toString();
 
@@ -307,7 +305,13 @@ void _showOTPSUCCESSDialog(BuildContext context) {
                     ),
                     24.height,
                     button('Continue', () {
-                      const MainNavigation().launch(context);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MainNavigation(),
+                        ),
+                        (Route<dynamic> route) => false,
+                      );
                     }, context, 0xff3E57B4, 0xff3E57B4, Colors.white),
                     12.height,
                   ],
@@ -319,5 +323,4 @@ void _showOTPSUCCESSDialog(BuildContext context) {
       );
     },
   );
-  ;
 }

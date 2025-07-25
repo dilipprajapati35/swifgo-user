@@ -1,167 +1,143 @@
+// lib/services/socket_service.dart
+
+import 'dart:developer';
+import 'package:flutter_arch/storage/flutter_secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:async';
 
 class SocketService {
+  // --- Singleton Setup ---
   static final SocketService _instance = SocketService._internal();
-  factory SocketService() => _instance;
+  factory SocketService() {
+    return _instance;
+  }
   SocketService._internal();
+  // -------------------------
 
   IO.Socket? _socket;
-  bool _isConnected = false;
-  String? _currentBookingId;
-  Timer? _refreshTimer;
-  Timer? _heartbeatTimer;
+  IO.Socket? get socket => _socket;
 
-  // Callback to notify the UI of new locations
-  Function(Map<String, dynamic>)? onLocationUpdate;
+  bool get isConnected => _socket?.connected ?? false;
 
-  void initSocket(String tripId, Function(Map<String, dynamic>) onUpdate) {
-    print('Initializing socket for trip: $tripId');
-    
-    // Use the same logic as passenger socket
-    initSocketForPassenger(tripId, onUpdate);
-  }
-
-  void initSocketForPassenger(String bookingId, Function(Map<String, dynamic>) onUpdate) {
-    print('Initializing socket for booking: $bookingId');
-    
-    // Store the callback and booking ID
-    onLocationUpdate = onUpdate;
-    _currentBookingId = bookingId;
-    
-    // If socket is already connected to the same booking, just update callback
-    if (_socket != null && _isConnected && _currentBookingId == bookingId) {
-      print('Socket already connected for this booking');
+  // Generic initializer
+  void _initializeSocket(String userToken) {
+    if (_socket != null && _socket!.connected) {
+      log("✅ Socket is already connected.", name: 'SocketService');
       return;
     }
     
-    // Disconnect existing socket if any
-    _disconnectSocket();
-    
-    // Start the socket connection
-    _createSocketConnection(bookingId);
-    
-    // Set up periodic refresh every 2 seconds
-    _startPeriodicRefresh(bookingId);
-    
-    // Set up heartbeat to check connection
-    _startHeartbeat();
-  }
-  
-  void _createSocketConnection(String bookingId) {
-    final String serverUrl = 'http://34.93.60.221:3001';
-    
-    _socket = IO.io(serverUrl, <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': true,
-      'reconnection': true,
-      'reconnectionAttempts': 10,
-      'reconnectionDelay': 500,
-      'timeout': 10000,
-      'forceNew': true, // Force new connection each time
-    });
+    // Disconnect any previous instance before creating a new one
+    _socket?.dispose();
 
-    _socket!.onConnect((_) {
-      print('Socket connected for passenger! Joining booking room: $bookingId');
-      _isConnected = true;
-      _socket!.emit('joinBookingRoom', bookingId);
+    try {
+      const String socketUrl = 'http://34.93.60.221:3001/tracking'; // TODO: Use https/wss in production
+
+      _socket = IO.io(socketUrl, <String, dynamic>{
+        'transports': ['websocket'],
+        'autoConnect': false, // We will connect manually
+        'auth': {'token': userToken}, // Pass the token for authentication
+        'reconnection': true,
+        'reconnectionAttempts': 5,
+        'reconnectionDelay': 1000,
+      });
+
+      _socket!.connect();
+
+      _socket!.onConnect((_) {
+        log('✅ WebSocket Connected to server: ${_socket?.id}', name: 'SocketService');
+      });
+
+      _socket!.onDisconnect((reason) {
+        log('❌ WebSocket Disconnected from server. Reason: $reason', name: 'SocketService');
+      });
+
+      _socket!.onError((error) {
+        log('😡 Socket Error: $error', name: 'SocketService');
+      });
       
-      // Request immediate driver location update
-      _socket!.emit('requestDriverLocation', bookingId);
-    });
+      _socket!.onConnectError((error) {
+        log('😡 Socket Connection Error: $error', name: 'SocketService');
+      });
 
-    _socket!.on('driverLocationUpdate', (data) {
-      print('Received driver location update: $data');
-      if (onLocationUpdate != null) {
-        try {
-          onLocationUpdate!(data as Map<String, dynamic>);
-        } catch (e) {
-          print('Error processing location update: $e');
-        }
-      }
-    });
-
-    _socket!.onDisconnect((_) {
-      print('Socket disconnected');
-      _isConnected = false;
-    });
-
-    _socket!.onReconnect((_) {
-      print('Socket reconnected! Rejoining booking room: $bookingId');
-      _isConnected = true;
-      _socket!.emit('joinBookingRoom', bookingId);
-      _socket!.emit('requestDriverLocation', bookingId);
-    });
-
-    _socket!.onError((error) {
-      print('Socket Error: $error');
-      _isConnected = false;
-    });
-
-    _socket!.onConnectError((error) {
-      print('Socket Connection Error: $error');
-      _isConnected = false;
-    });
-  }
-  
-  void _startPeriodicRefresh(String bookingId) {
-    _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(Duration(seconds: 2), (timer) {
-      if (_socket != null && _isConnected) {
-        print('Requesting driver location update (periodic)');
-        _socket!.emit('requestDriverLocation', bookingId);
-        _socket!.emit('joinBookingRoom', bookingId); // Rejoin room to ensure connection
-      } else {
-        print('Socket not connected, attempting to reconnect...');
-        _createSocketConnection(bookingId);
-      }
-    });
-  }
-  
-  void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(Duration(seconds: 5), (timer) {
-      if (_socket != null && _isConnected) {
-        _socket!.emit('ping');
-      }
-    });
-  }
-
-  void _disconnectSocket() {
-    if (_socket != null) {
-      print('Disconnecting existing socket');
-      _socket!.disconnect();
-      _socket!.dispose();
-      _socket = null;
-      _isConnected = false;
+    } catch (e) {
+      log('😡 Error initializing socket: $e', name: 'SocketService');
     }
-    
-    // Cancel timers
-    _refreshTimer?.cancel();
-    _heartbeatTimer?.cancel();
+  }
+
+  /// ==================================================================
+  ///  Passenger Specific Methods (Called from TrackingViewModel)
+  /// ==================================================================
+  void initSocketForPassenger(
+    String bookingId,
+    Function(dynamic) onLocationUpdate, {
+    required Function(bool) onConnectionChange,
+  }) async {
+    final token = await MySecureStorage().readToken();
+    // const userToken = "PASSENGER_JWT_TOKEN_PLACEHOLDER";
+
+    // Ensure socket is initialized
+    _initializeSocket(token!);
+
+    if (_socket == null) return;
+
+    // Listen for connection status changes
+    socket!.onConnect((_) => onConnectionChange(true));
+    socket!.onDisconnect((_) => onConnectionChange(false));
+
+    // Join the room for this specific booking
+    _socket!.emit('joinBookingRoom', bookingId);
+    log('📡 Emitted event: joinBookingRoom for booking: $bookingId', name: 'SocketService');
+
+    // Listen for incoming driver location updates from the server
+    _socket!.on('driverLocationUpdate', (data) {
+      // Pass the data to the callback function provided by the ViewModel
+      onLocationUpdate(data);
+    });
+  }
+
+  void leaveBookingRoom(String bookingId) {
+    if (_socket != null) {
+      _socket!.emit('leaveBookingRoom', bookingId);
+      log('📡 Emitted event: leaveBookingRoom for booking: $bookingId', name: 'SocketService');
+    }
+  }
+
+  /// ==================================================================
+  ///  Driver Specific Methods (Called from Driver App)
+  /// ==================================================================
+  
+  // A generic method to send any event to the server
+  void emit(String event, dynamic data) {
+    if (_socket == null || !_socket!.connected) {
+      log('⚠ Socket not initialized or disconnected. Cannot send event: $event', name: 'SocketService');
+      return;
+    }
+    _socket!.emit(event, data);
+    log('📡 Emitted event: $event with data: $data', name: 'SocketService');
+  }
+
+  // You can keep driver-specific functions here if this service is shared
+  // For example:
+  void joinDriverRoom(String tripId) { /* ... */ }
+  void leaveDriverRoom(String tripId) { /* ... */ }
+  void notifyTripStarted(String tripId) { /* ... */ }
+
+  /// ==================================================================
+  ///  General Methods
+  /// ==================================================================
+
+  void forceRefresh() {
+    if (_socket != null) {
+      log("🔄 Forcing a manual disconnect and reconnect.", name: 'SocketService');
+      _socket!.disconnect();
+      _socket!.connect();
+    }
   }
 
   void disconnect() {
-    print('Manually disconnecting socket');
-    _disconnectSocket();
-    onLocationUpdate = null;
-    _currentBookingId = null;
-  }
-
-  // Method to manually refresh connection immediately
-  void forceRefresh() {
-    if (_currentBookingId != null) {
-      print('Force refreshing socket connection');
-      _disconnectSocket();
-      _createSocketConnection(_currentBookingId!);
-      _startPeriodicRefresh(_currentBookingId!);
-      _startHeartbeat();
+    if (_socket != null) {
+      log("🔌 Disconnecting socket permanently.", name: 'SocketService');
+      _socket!.dispose(); // Use dispose to clean up all listeners
+      _socket = null;
     }
   }
-
-  // Method to check connection status
-  bool get isConnected => _isConnected;
-  
-  // Method to get current booking ID
-  String? get currentBookingId => _currentBookingId;
-} 
+}

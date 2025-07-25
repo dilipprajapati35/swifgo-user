@@ -10,6 +10,8 @@ class RideModel {
   final String destinationLocation;
   final String status;
   final String statusDisplay;
+  final bool canTrack; // New field to determine if live tracking is available
+  final List<Map<String, dynamic>> stops; // New field for stops
 
   RideModel({
     required this.bookingId,
@@ -23,9 +25,17 @@ class RideModel {
     required this.destinationLocation,
     required this.status,
     required this.statusDisplay,
+    this.canTrack = false, // Default to false
+    this.stops = const [], // Default to empty list
   });
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
+    List<Map<String, dynamic>> stopsList = [];
+    if (json['stops'] != null && json['stops'] is List) {
+      stopsList = List<Map<String, dynamic>>.from(
+        (json['stops'] as List).map((e) => Map<String, dynamic>.from(e)),
+      );
+    }
     return RideModel(
       bookingId: json['bookingId'] ?? '',
       crn: json['crn'] ?? '',
@@ -38,6 +48,8 @@ class RideModel {
       destinationLocation: json['destinationLocation'] ?? '',
       status: json['status'] ?? '',
       statusDisplay: json['statusDisplay'] ?? '',
+      canTrack: json['canTrack'] ?? false, // Parse canTrack from API
+      stops: stopsList,
     );
   }
 }

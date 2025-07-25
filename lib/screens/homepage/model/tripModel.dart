@@ -12,6 +12,7 @@ class TripModel {
   final int availableSeats;
   final VehicleInfo vehicleInfo;
   final String durationText;
+  final List<Map<String, dynamic>> stops;
 
   TripModel({
     required this.scheduledTripId,
@@ -27,9 +28,23 @@ class TripModel {
     required this.availableSeats,
     required this.vehicleInfo,
     required this.durationText,
+    required this.stops,
   });
 
   factory TripModel.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic value) {
+      if (value is int) return value;
+      if (value is double) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+    List<Map<String, dynamic>> stops = (json['stops'] as List?)?.map((e) {
+      final stop = Map<String, dynamic>.from(e);
+      if (stop.containsKey('sequence')) {
+        stop['sequence'] = parseInt(stop['sequence']);
+      }
+      return stop;
+    }).toList() ?? [];
     return TripModel(
       scheduledTripId: json['scheduledTripId'] ?? '',
       routeName: json['routeName'] ?? '',
@@ -39,11 +54,12 @@ class TripModel {
       destinationLocationName: json['destinationLocationName'] ?? '',
       departureDateTime: DateTime.parse(json['departureDateTime']),
       estimatedArrivalDateTime: DateTime.parse(json['estimatedArrivalDateTime']),
-      price: json['price'] ?? 0,
+      price: parseInt(json['price']),
       currency: json['currency'] ?? 'INR',
-      availableSeats: json['availableSeats'] ?? 0,
+      availableSeats: parseInt(json['availableSeats']),
       vehicleInfo: VehicleInfo.fromJson(json['vehicleInfo'] ?? {}),
       durationText: json['durationText'] ?? '',
+      stops: stops,
     );
   }
 }

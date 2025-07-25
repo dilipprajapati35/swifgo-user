@@ -159,6 +159,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       });
 
       if (response.statusCode == 201 && response.data['accessToken'] != null) {
+        await DioHttp().fcmToken(context);                    
         SelfieUploadScreen().launch(context);
       }
     } catch (e) {

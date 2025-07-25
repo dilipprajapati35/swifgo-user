@@ -28,12 +28,6 @@ class _PhoneOtpVerificationScreenState
   bool isLoading = false;
   final storage = MySecureStorage();
 
-    @override
-  void initState() {
-    super.initState();
-    
-    // Removed auto-fill functionality - users will enter OTP manually
-  }
   Future<bool> verifyOtpWithApi(String otp) async {
     if (widget.phoneNumber == null) return false;
 
@@ -54,7 +48,6 @@ class _PhoneOtpVerificationScreenState
 
 
         final userId = response.data['user']['id'];
-        final isNewUser = response.data['isNewUser'] ?? true;
 
         if (userId != null) {
           final storage = MySecureStorage();

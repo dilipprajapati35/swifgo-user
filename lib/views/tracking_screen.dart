@@ -4,7 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../view_models/tracking_view_model.dart';
 
-class TrackingScreen extends StatelessWidget {
+// --- UPDATED --- Converted to a StatefulWidget
+class TrackingScreen extends StatefulWidget {
   final String bookingId;
   final String userToken;
   final LatLng? pickupPosition;
@@ -19,20 +20,32 @@ class TrackingScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<TrackingScreen> createState() => _TrackingScreenState();
+}
+
+class _TrackingScreenState extends State<TrackingScreen> {
+  // --- NEW --- Controller to programmatically move the map
+  GoogleMapController? _mapController;
+
+  // --- NEW --- Keep track of the last known position to prevent redundant animations
+  LatLng? _lastKnownDriverPosition;
+
+  @override
   Widget build(BuildContext context) {
-    // Use ChangeNotifierProvider to provide the ViewModel to the widget tree
     return ChangeNotifierProvider(
       create: (_) => TrackingViewModel(
-        bookingId: bookingId,
-        userToken: userToken,
-        pickupPosition: pickupPosition,
-        destinationPosition: destinationPosition,
+        bookingId: widget.bookingId,
+        userToken: widget.userToken,
+        pickupPosition: widget.pickupPosition,
+        destinationPosition: widget.destinationPosition,
       ),
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Track Your Ride'),
+          title: Text('Live Tracking'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
           actions: [
-            // Connection status indicator
             Consumer<TrackingViewModel>(
               builder: (context, viewModel, child) {
                 return Container(
@@ -40,22 +53,24 @@ class TrackingScreen extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.circle,
-                        size: 12,
-                        color: viewModel.isSocketConnected ? Colors.green : Colors.red,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        viewModel.isSocketConnected ? 'Live (2s)' : 'Offline',
-                        style: TextStyle(fontSize: 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: viewModel.isWebSocketConnected ? Colors.red : Colors.grey,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.circle, size: 8, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text('LIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ],
+                        ),
                       ),
                       SizedBox(width: 8),
-                      // Refresh button
                       GestureDetector(
-                        onTap: () {
-                          viewModel.refreshConnection();
-                        },
+                        onTap: () => viewModel.refreshConnection(),
                         child: Icon(Icons.refresh, size: 20),
                       ),
                     ],
@@ -67,53 +82,39 @@ class TrackingScreen extends StatelessWidget {
         ),
         body: Consumer<TrackingViewModel>(
           builder: (context, viewModel, child) {
-            if (viewModel.isLoading) {
-              return Center(child: CircularProgressIndicator());
+
+            // --- UPDATED --- Logic to move the camera when the driver's position updates
+            if (viewModel.driverPosition != null && 
+                viewModel.passengerPosition != null && 
+                _mapController != null && 
+                viewModel.driverPosition != _lastKnownDriverPosition) {
+              
+              // Calculate bounds to show both driver and passenger
+              _fitBothPositions(viewModel.driverPosition!, viewModel.passengerPosition!);
+              
+              // Update the last known position
+              _lastKnownDriverPosition = viewModel.driverPosition;
             }
 
-            if (viewModel.waitingForRide) {
-              // Waiting state: show map with overlay message
-              return Stack(
-                children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target:
-                          viewModel.pickupPosition ?? LatLng(28.6139, 77.2090),
-                      zoom: 16,
-                    ),
-                    markers: {},
-                  ),
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: Container(
-                      margin: EdgeInsets.only(top: 40, left: 24, right: 24),
-                      padding:
-                          EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'The ride has not started yet.\nTracking will begin once your ride starts.',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            } else {
-              // Live tracking: show different UI based on ride status
-              return Stack(
-                children: [
-                  _buildTrackingMap(viewModel),
-                  _buildTrackingInfo(context, viewModel),
-                ],
+            if (viewModel.isLoading) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Connecting to live tracking...'),
+                  ],
+                ),
               );
             }
+
+            return Stack(
+              children: [
+                _buildTrackingMap(viewModel),
+                _buildTrackingInfo(context, viewModel),
+              ],
+            );
           },
         ),
       ),
@@ -130,25 +131,42 @@ class TrackingScreen extends StatelessWidget {
           markerId: MarkerId('driver'),
           position: viewModel.driverPosition!,
           icon: viewModel.driverIcon,
-          infoWindow: InfoWindow(title: 'Driver'),
+          infoWindow: InfoWindow(
+            title: 'Driver',
+            snippet: 'Coming to pick you up',
+          ),
+          anchor: Offset(0.5, 0.5), // Center the icon on the coordinate
+          rotation: 0, // You can later add bearing/rotation data here
         ),
       );
     }
 
-    // Add pickup/destination marker based on ride status
+    // Add passenger marker (your location)
+    if (viewModel.passengerPosition != null) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('passenger'),
+          position: viewModel.passengerPosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(
+            title: 'You',
+            snippet: 'Your current location',
+          ),
+        ),
+      );
+    }
+    
+    // Add pickup/destination markers for reference
     if (!viewModel.rideStarted && viewModel.pickupPosition != null) {
-      // Show pickup location when driver is coming to pick you up
       markers.add(
         Marker(
           markerId: MarkerId('pickup'),
           position: viewModel.pickupPosition!,
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(title: 'Pickup Location'),
         ),
       );
     } else if (viewModel.rideStarted && viewModel.destination != null) {
-      // Show destination when ride has started
       markers.add(
         Marker(
           markerId: MarkerId('destination'),
@@ -163,34 +181,37 @@ class TrackingScreen extends StatelessWidget {
     if (viewModel.polylinePoints.isNotEmpty) {
       polylines.add(
         Polyline(
-          polylineId: PolylineId('route'),
-          color: viewModel.rideStarted ? Colors.green : Colors.blue,
-          width: 5,
+          polylineId: PolylineId('driver-to-passenger-route'),
+          color: Colors.blue,
+          width: 6,
           points: viewModel.polylinePoints,
+          patterns: [PatternItem.dash(20), PatternItem.gap(10)], // Dashed line for better visibility
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
         ),
       );
     }
 
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: viewModel.driverPosition ??
-            viewModel.pickupPosition ??
-            viewModel.destination ??
-            LatLng(28.6139, 77.2090),
+        // The blue dot you see is your own location, not the driver. We will center on it initially.
+        target: viewModel.passengerPosition ?? LatLng(28.6139, 77.2090),
         zoom: 15,
       ),
       markers: markers,
       polylines: polylines,
-      myLocationEnabled: true,
+      myLocationEnabled: true, // This creates the blue dot for the user's own location
       myLocationButtonEnabled: true,
+      // --- UPDATED --- Store the controller when the map is created
       onMapCreated: (GoogleMapController controller) {
-        // Auto-fit bounds to show both driver and destination
-        _fitMapBounds(controller, viewModel);
+        _mapController = controller;
       },
     );
   }
 
   Widget _buildTrackingInfo(BuildContext context, TrackingViewModel viewModel) {
+    // This widget's code is correct and does not need changes.
+    // It's included here for completeness of the file.
     return Positioned(
       bottom: 0,
       left: 0,
@@ -214,7 +235,6 @@ class TrackingScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Status indicator
             Container(
               width: 50,
               height: 4,
@@ -224,24 +244,20 @@ class TrackingScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
-
-            // Driver status
             Row(
               children: [
                 Container(
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: viewModel.rideStarted ? Colors.green : Colors.blue,
+                    color: Colors.blue,
                     shape: BoxShape.circle,
                   ),
                 ),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    viewModel.rideStarted
-                        ? 'Ride in Progress'
-                        : 'Driver is coming to pick you up',
+                    'Driver is coming to your location',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -251,10 +267,7 @@ class TrackingScreen extends StatelessWidget {
                 ),
               ],
             ),
-
             SizedBox(height: 16),
-
-            // Distance and time info
             if (viewModel.distanceToPickup != null &&
                 viewModel.estimatedArrivalTime != null)
               Row(
@@ -263,49 +276,20 @@ class TrackingScreen extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Distance',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        '${viewModel.distanceToPickup!.toStringAsFixed(1)} km',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      Text('Distance to You', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text('${viewModel.distanceToPickup!.toStringAsFixed(1)} km', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87)),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        'Estimated Time',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        viewModel.estimatedArrivalTime!,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      Text('Arrival Time', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text(viewModel.estimatedArrivalTime!, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blue)),
                     ],
                   ),
                 ],
               ),
-
-            SizedBox(height: 20),           
-
-            // Call driver button
+            SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -317,14 +301,7 @@ class TrackingScreen extends StatelessWidget {
                   );
                 },
                 icon: Icon(Icons.phone, color: Colors.white),
-                label: Text(
-                  'Call Driver',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
+                label: Text('Call Driver', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(
@@ -339,38 +316,25 @@ class TrackingScreen extends StatelessWidget {
     );
   }
 
-  void _fitMapBounds(
-      GoogleMapController controller, TrackingViewModel viewModel) {
-    if (viewModel.driverPosition != null) {
-      LatLng destination = viewModel.rideStarted
-          ? (viewModel.destination ?? viewModel.driverPosition!)
-          : (viewModel.pickupPosition ?? viewModel.driverPosition!);
+  // Method to fit both driver and passenger positions in camera view
+  void _fitBothPositions(LatLng driverPos, LatLng passengerPos) {
+    if (_mapController == null) return;
 
-      // Calculate bounds to include both driver and destination
-      double minLat = viewModel.driverPosition!.latitude < destination.latitude
-          ? viewModel.driverPosition!.latitude
-          : destination.latitude;
-      double maxLat = viewModel.driverPosition!.latitude > destination.latitude
-          ? viewModel.driverPosition!.latitude
-          : destination.latitude;
-      double minLng =
-          viewModel.driverPosition!.longitude < destination.longitude
-              ? viewModel.driverPosition!.longitude
-              : destination.longitude;
-      double maxLng =
-          viewModel.driverPosition!.longitude > destination.longitude
-              ? viewModel.driverPosition!.longitude
-              : destination.longitude;
+    // Calculate bounds to include both positions
+    double minLat = driverPos.latitude < passengerPos.latitude ? driverPos.latitude : passengerPos.latitude;
+    double maxLat = driverPos.latitude > passengerPos.latitude ? driverPos.latitude : passengerPos.latitude;
+    double minLng = driverPos.longitude < passengerPos.longitude ? driverPos.longitude : passengerPos.longitude;
+    double maxLng = driverPos.longitude > passengerPos.longitude ? driverPos.longitude : passengerPos.longitude;
 
-      controller.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(minLat - 0.005, minLng - 0.005),
-            northeast: LatLng(maxLat + 0.005, maxLng + 0.005),
-          ),
-          100.0, // padding
-        ),
-      );
-    }
+    // Add padding to bounds
+    double padding = 0.01; // Adjust this value for more/less padding
+    LatLngBounds bounds = LatLngBounds(
+      southwest: LatLng(minLat - padding, minLng - padding),
+      northeast: LatLng(maxLat + padding, maxLng + padding),
+    );
+
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100.0), // 100.0 is edge padding
+    );
   }
 }

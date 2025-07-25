@@ -9,24 +9,26 @@ import 'package:flutter_arch/screens/homepage/view/date_time_pick.screen.dart';
 import 'package:flutter_arch/screens/homepage/view/slot_selection_new.screen.dart';
 import 'package:flutter_arch/theme/colorTheme.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 enum FavoriteType { home, work, other }
 
 class ConfirmLocation extends StatefulWidget {
-  const ConfirmLocation(
-      {super.key,
-      required this.pickupAddress,
-      required this.destinationAddress,
-      required this.pickupLatLng,
-      required this.destinationLatLng,
-      required this.tripType,
-      this.returnPickupAddress,
-      this.returnDestinationAddress,
-      this.returnPickupLatLng,
-      this.returnDestinationLatLng,
-      this.returnDate,
-      this.returnTimePeriod});
+  const ConfirmLocation({
+    super.key,
+    required this.pickupAddress,
+    required this.destinationAddress,
+    required this.pickupLatLng,
+    required this.destinationLatLng,
+    required this.tripType,
+    this.returnPickupAddress,
+    this.returnDestinationAddress,
+    this.returnPickupLatLng,
+    this.returnDestinationLatLng,
+    this.returnDate,
+    this.returnTimePeriod,
+  });
   final String pickupAddress;
   final String destinationAddress;
   final LatLng pickupLatLng;
@@ -47,19 +49,24 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
   GoogleMapController? _mapController;
   late LatLng _currentMapCenter;
 
+  // Polyline and marker state
+  Set<Polyline> _polylines = {};
+  Set<Marker> _markers = {};
+  List<LatLng> _polylineCoordinates = [];
+  static const String _googleApiKey = 'AIzaSyCXvZ6f1LTP07lD6zhqnozAG20MzlUjis8'; // TODO: Replace with your key
+
   // Use the passed location data
   final List<Map<String, dynamic>> _locationSuggestions = [];
 
   // State for the "Save as Favorite" modal
-  FavoriteType _selectedFavoriteType = FavoriteType.other; // Default selection
-  final TextEditingController _otherFavoriteNameController =
-      TextEditingController();
+  // FavoriteType _selectedFavoriteType = FavoriteType.other; // Default selection
+  final TextEditingController _otherFavoriteNameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     print("ConfirmLocation initState called");
-    print("tripType: ${widget.tripType}");
+    print("tripType: \\${widget.tripType}");
     _currentMapCenter = widget.pickupLatLng;
     _locationSuggestions.addAll([
       {
@@ -77,6 +84,49 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
         "favoriteName": null,
       },
     ]);
+    _setMapRoute();
+  }
+
+  Future<void> _setMapRoute() async {
+    PolylinePoints polylinePoints = PolylinePoints();
+    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+      googleApiKey: _googleApiKey,
+      request: PolylineRequest(
+        origin: PointLatLng(widget.pickupLatLng.latitude, widget.pickupLatLng.longitude),
+        destination: PointLatLng(widget.destinationLatLng.latitude, widget.destinationLatLng.longitude),
+        mode: TravelMode.driving,
+      ),
+    );
+
+    if (result.points.isNotEmpty) {
+      _polylineCoordinates = result.points
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      _polylines = {
+        Polyline(
+          polylineId: PolylineId('route'),
+          color: Colors.blue,
+          width: 5,
+          points: _polylineCoordinates,
+        ),
+      };
+    }
+
+    _markers = {
+      Marker(
+        markerId: MarkerId('pickup'),
+        position: widget.pickupLatLng,
+        infoWindow: InfoWindow(title: 'Pickup'),
+      ),
+      Marker(
+        markerId: MarkerId('destination'),
+        position: widget.destinationLatLng,
+        infoWindow: InfoWindow(title: 'Destination'),
+      ),
+    };
+
+    setState(() {});
   }
 
   @override
@@ -195,8 +245,7 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
                       color: AppColor.greyWhite,
                       borderRadius: BorderRadius.circular(12.0),
                       border: Border.all(
-                        color: AppColor
-                            .greyShade6, // Make sure AppColor.greyShade6 is defined
+                        color: AppColor.greyShade6, // Make sure AppColor.greyShade6 is defined
                         width: 1,
                       ),
                       boxShadow: [
@@ -380,19 +429,13 @@ class _ConfirmLocationState extends State<ConfirmLocation> {
                         target: _currentMapCenter,
                         zoom: 15.0,
                       ),
-                      myLocationButtonEnabled:
-                          true, // Shows the "My Location" button
-                      myLocationEnabled:
-                          true, // Shows the blue dot for current location (requires permission)
-                      zoomControlsEnabled: true, // Shows zoom + / - buttons
+                      myLocationButtonEnabled: true,
+                      myLocationEnabled: true,
+                      zoomControlsEnabled: true,
                       onCameraMove: _onCameraMove,
                       onCameraIdle: _onCameraIdle,
-                      // markers: { // Example of adding a marker if needed
-                      //   Marker(
-                      //     markerId: MarkerId("someId"),
-                      //     position: _currentMapCenter,
-                      //   )
-                      // },
+                      polylines: _polylines,
+                      markers: _markers,
                     ),
                     IgnorePointer(
                       child: Image.asset(

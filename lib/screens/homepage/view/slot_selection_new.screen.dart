@@ -430,6 +430,8 @@ class _TripCard extends StatelessWidget {
     String month = tripData.departureDateTime.month.toString().padLeft(2, '0');
     String amPm = tripData.departureDateTime.hour >= 12 ? 'PM' : 'AM';
 
+    final stops = tripData.stops;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -523,43 +525,46 @@ class _TripCard extends StatelessWidget {
             12.height,
             Divider(color: AppColor.greyShade5.withOpacity(0.7)),
             12.height,
-            // Bottom section: Pickup and Destination
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+            // Bottom section: Pickup, Stops, Destination
+            if (stops.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.green, size: 18),
+                  6.width,
+                  Expanded(child: Text('Pickup: ${stops.first['name']}', style: AppStyle.caption1w400)),
+                ],
+              ),
+              if (stops.length > 2)
+                ...List.generate(stops.length - 2, (i) => Row(
                   children: [
-                    // Pickup icon
-                    Image.asset(
-                      AppAssets.pickupLocation,
-                      width: 24,
-                      height: 24,
-                    ),
-                    // Dashed line to destination
-                    _buildDashedConnector(),
-                    // Destination icon
-                    Image.asset(
-                      AppAssets.destination,
-                      width: 24,
-                      height: 24,
-                    ),
+                    Icon(Icons.more_vert, color: Colors.blueGrey, size: 16),
+                    6.width,
+                    Expanded(child: Text('Stop: ${stops[i+1]['name']}', style: AppStyle.caption1w400)),
                   ],
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      // Pickup
-                      _buildLocationRow(
-                          "Pickup", tripData.pickupLocationName, Color(0xFF08875D)),
-                      12.height,
-                      // Destination
-                      _buildLocationRow("Destination",
-                          tripData.destinationLocationName, Color(0xFFE02D3C)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                )),
+              Row(
+                children: [
+                  Icon(Icons.flag, color: Colors.red, size: 18),
+                  6.width,
+                  Expanded(child: Text('Destination: ${stops.last['name']}', style: AppStyle.caption1w400)),
+                ],
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.green, size: 18),
+                  6.width,
+                  Expanded(child: Text('Pickup: ${tripData.pickupLocationName}', style: AppStyle.caption1w400)),
+                ],
+              ),
+              Row(
+                children: [
+                  Icon(Icons.flag, color: Colors.red, size: 18),
+                  6.width,
+                  Expanded(child: Text('Destination: ${tripData.destinationLocationName}', style: AppStyle.caption1w400)),
+                ],
+              ),
+            ],
             8.height,
             // Vehicle info
             Container(

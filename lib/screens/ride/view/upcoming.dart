@@ -72,6 +72,8 @@ class _UpcomingState extends State<Upcoming> {
   }
 
   Widget _buildRideCardContent(RideModel ride) {
+    // Show all stops: first is pickup, last is destination, others are waypoints
+    final stops = (ride as dynamic).stops ?? [];
     return Column(
       children: [
         _buildTopRow(ride),
@@ -81,8 +83,37 @@ class _UpcomingState extends State<Upcoming> {
         _buildTypeDurationRow(),
         SizedBox(height: 12),
         Divider(thickness: 1),
-        _buildPickupTile(ride),
-        _buildDestinationTile(ride),
+        ...List.generate(stops.length, (index) {
+          final stop = stops[index];
+          String label;
+          Color color;
+          if (index == 0) {
+            label = 'Pickup';
+            color = Color(0xff08875D);
+          } else if (index == stops.length - 1) {
+            label = 'Destination';
+            color = Colors.red;
+          } else {
+            label = 'Stop ${index}';
+            color = Colors.blueGrey;
+          }
+          return ListTile(
+            leading: Container(
+              height: 18,
+              width: 18,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            title: Text(label, style: GoogleFonts.nunito(color: color, fontSize: 12)),
+            subtitle: Text(
+              stop['name'] ?? '',
+              style: GoogleFonts.nunito(fontSize: 17),
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }),
         Divider(),
         _buildArrivedRow(),
       ],

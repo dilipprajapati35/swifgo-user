@@ -157,11 +157,20 @@ class DioHttp {
 
   Future<Response> phoneRequestOtp(
       BuildContext context, String phoneNumber) async {
-    final fcmToken = await _secureStorage.readFcmToken();
     return await _postRequest(
       context: context,
       endpoint: ApiEndpoint.phonerequestotp,
-      data: {"phoneNumber": phoneNumber, "fcmToken": fcmToken},
+      data: {"phoneNumber": phoneNumber},
+      wrapData: false,
+    );
+  }
+
+  Future<Response> fcmToken(BuildContext context) async {
+    final fcmToken = await _secureStorage.readFcmToken();
+    return await _postRequest(
+      context: context,
+      endpoint: ApiEndpoint.fcmToken,
+      data: {"fcmToken": fcmToken},
       wrapData: false,
     );
   }
@@ -489,6 +498,57 @@ class DioHttp {
     }
 
     return ridesJson.map((rideJson) => RideModel.fromJson(rideJson)).toList();
+  }
+
+  // --- UPDATED --- This method now correctly parses the detailed booking response.
+  Future<RideModel> getBookingDetails(
+      BuildContext context, String bookingId) async {
+    final response = await _getRequest(
+      context: context,
+      endpoint: ApiEndpoint
+          .myRides, // This endpoint value doesn't matter since we use customPath
+      customPath: '/bookings/$bookingId/details',
+    );
+
+    // The backend returns a single JSON object. Ensure it's a map.
+    if (response.data is Map<String, dynamic>) {
+      // The response from `/details` is structured differently from the list view.
+      // We need to map it manually to our RideModel.
+      final json = response.data as Map<String, dynamic>;
+
+      // The backend provides a `paymentBreakdown` object. We need to extract the total fare.
+      final paymentBreakdown =
+          json['paymentBreakdown'] as Map<String, dynamic>? ?? {};
+      final fare = paymentBreakdown['total']?.toString() ?? '₹0';
+
+      // The backend provides a `rideDetail` object for date and time.
+      final rideDetail = json['rideDetail'] as Map<String, dynamic>? ?? {};
+      final dateTimeParts =
+          (rideDetail['dateTime']?.toString() ?? 'N/A, N/A').split(', ');
+      final date = dateTimeParts.length > 0 ? dateTimeParts[0] : 'N/A';
+      final time = dateTimeParts.length > 1 ? dateTimeParts[1] : 'N/A';
+
+      // Manually construct the RideModel using the correct fields from the detailed response.
+      return RideModel(
+        bookingId: json['bookingId'] ?? '',
+        crn: json['crn'] ?? '',
+        vehicleDescription: rideDetail['carCategory'] ?? 'N/A',
+        date: date,
+        time: time,
+        fare: fare,
+        paymentMethodDisplay: json['paymentMethodDisplay'] ?? 'N/A',
+        pickupLocation: json['pickupLocation'] ?? '',
+        destinationLocation: json['destinationLocation'] ?? '',
+        status: json['status'] ?? '',
+        statusDisplay: json['statusDisplay'] ?? '',
+        canTrack:
+            json['canTrack'] ?? false, // Crucial part: parse the canTrack flag.
+      );
+    } else {
+      // If the response is not what we expect, throw an error.
+      throw Exception(
+          'Failed to parse booking details. Unexpected response format.');
+    }
   }
 
   Future<UserModel> getUserInfo(BuildContext context) async {
