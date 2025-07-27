@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_arch/common/snack_bar.dart';
-import 'package:flutter_arch/storage/flutter_secure_storage.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'package:flutter_arch/common/snack_bar.dart';
+import 'package:flutter_arch/storage/flutter_secure_storage.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  log('Background message received: ${message.notification?.title}');
+  log('📥 Background message: ${message.notification?.title}');
+  await FirebaseMessagingService.showBackgroundNotification(message);
 }
 
 class FirebaseMessagingService {
@@ -26,56 +29,46 @@ class FirebaseMessagingService {
   FirebaseMessagingService._internal();
 
   String? _fcmToken;
-
   String? get fcmToken => _fcmToken;
+
+  static final FlutterLocalNotificationsPlugin _staticFlutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> initialize(BuildContext? context) async {
     try {
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
       await _requestPermission();
-
       await _initializeLocalNotifications();
-
-      await getToken();
-
+      await _getToken();
       _configureMessaging(context);
-
-      log('Firebase Messaging initialized');
+      log('✅ Firebase Messaging initialized');
     } catch (e) {
-      log('Error initializing Firebase Messaging: $e');
-      // Continue without crashing the app
+      log('❌ Firebase Messaging init error: $e');
     }
   }
 
   Future<void> _requestPermission() async {
-    NotificationSettings settings = await _firebaseMessaging.requestPermission(
+    final settings = await _firebaseMessaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
-      provisional: false,
     );
-
-    log('Notification permission status: ${settings.authorizationStatus}');
+    log('🔐 Notification permission: ${settings.authorizationStatus}');
   }
 
   Future<void> _initializeLocalNotifications() async {
     try {
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher'); // Fallback to app icon
-
-      const InitializationSettings initializationSettings =
-          InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: null,
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettings = InitializationSettings(
+        android: androidInit,
+        iOS: null, // Add iOS settings if needed
       );
 
       await _flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
-          final payload = response.payload;
-          if (payload != null) {
-            log('Notification payload: $payload');
+        onDidReceiveNotificationResponse: (response) {
+          if (response.payload != null) {
+            log('📦 Notification payload: ${response.payload}');
           }
         },
       );
@@ -88,46 +81,41 @@ class FirebaseMessagingService {
       );
 
       await _flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(channel);
     } catch (e) {
-      log('Error initializing local notifications: $e');
+      log('❌ Local notification init error: $e');
     }
   }
 
   void _configureMessaging(BuildContext? context) {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      log('Foreground message received: ${message.notification?.title}');
-      log('Message data: ${message}');
+      log('📲 Foreground message: ${message.notification?.title}');
       _showNotification(message);
 
-      if (context != null) {
-        MySnackBar.showSnackBar(context,
-            message.notification?.title ?? 'New notification received');
+      if (context != null && message.notification?.title != null) {
+        MySnackBar.showSnackBar(context, message.notification!.title!);
       }
     });
 
-    FirebaseMessaging.instance
-        .getInitialMessage()
-        .then((RemoteMessage? message) {
+    FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
-        log('App opened from terminated state with message: ${message.notification?.title}');
+        log('🚀 App launched via notification: ${message.notification?.title}');
       }
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      log('App opened from background state with message: ${message.notification?.title}');
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      log('🟢 Notification opened app: ${message.notification?.title}');
     });
 
-    _firebaseMessaging.onTokenRefresh.listen((String token) {
+    _firebaseMessaging.onTokenRefresh.listen((String token) async {
       _fcmToken = token;
-      _saveFcmToken(token);
-      log('FCM token refreshed: $token');
+      await _saveFcmToken(token);
+      log('🔁 FCM token refreshed: $token');
     });
   }
 
-  Future<void> getToken() async {
+  Future<void> _getToken() async {
     try {
       _fcmToken = await _secureStorage.readFcmToken();
 
@@ -138,9 +126,9 @@ class FirebaseMessagingService {
         }
       }
 
-      log('FCM Token: $_fcmToken');
+      log('📡 FCM Token: $_fcmToken');
     } catch (e) {
-      log('Error getting FCM token: $e');
+      log('❌ Error getting FCM token: $e');
     }
   }
 
@@ -149,41 +137,43 @@ class FirebaseMessagingService {
   }
 
   Future<void> _showNotification(RemoteMessage message) async {
-    RemoteNotification? notification = message.notification;
-    AndroidNotification? android = message.notification?.android;
-
-    if (notification != null && android != null) {
-      AndroidNotificationDetails androidDetails = _createDefaultAndroidDetails(android);
-
-      await _flutterLocalNotificationsPlugin.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(android: androidDetails),
-        payload: json.encode(message.data),
-      );
-    }
+    await FirebaseMessagingService.showBackgroundNotification(message);
   }
 
-  AndroidNotificationDetails _createDefaultAndroidDetails(
-      AndroidNotification android) {
-    return AndroidNotificationDetails(
+  static Future<void> showBackgroundNotification(RemoteMessage message) async {
+    final notification = message.notification;
+    final android = notification?.android;
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'high_importance_channel',
       'High Importance Notifications',
       channelDescription: 'This channel is used for important notifications.',
-      icon: '@mipmap/ic_launcher', // Fallback to app icon
+      icon: '@mipmap/ic_launcher',
       priority: Priority.high,
       importance: Importance.max,
+    );
+
+    final NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+
+    final title = notification?.title ?? 'New Message';
+    final body = notification?.body ?? message.data['body'] ?? 'You have a new notification.';
+
+    await _staticFlutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      platformDetails,
+      payload: json.encode(message.data),
     );
   }
 
   Future<void> subscribeToTopic(String topic) async {
     await _firebaseMessaging.subscribeToTopic(topic);
-    log('Subscribed to topic: $topic');
+    log('📬 Subscribed to topic: $topic');
   }
 
   Future<void> unsubscribeFromTopic(String topic) async {
     await _firebaseMessaging.unsubscribeFromTopic(topic);
-    log('Unsubscribed from topic: $topic');
+    log('📭 Unsubscribed from topic: $topic');
   }
 }
